@@ -927,7 +927,7 @@ app.post('/api/translate-texts', async (req, res) => {
                 model: 'gpt-4o',
                 messages: [{
                     role: 'system',
-                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. Maintain any emojis. Return ONLY valid JSON.`
+                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. Maintain any emojis. Return ONLY valid JSON. CRITICAL: Each text is DIFFERENT and must get a UNIQUE translation. Never give the same translation for two different source texts.`
                 }, {
                     role: 'user',
                     content: `Translate these marketing texts into ${languages.map(l => LANG_NAMES[l]).join(', ')}:
@@ -2435,7 +2435,9 @@ CRITICAL RULES:
 6. Adapt idioms/expressions to what natives would say
 7. Target: men buying for themselves OR women buying gifts for partners
 
-Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.`
+Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.
+
+CRITICAL: You will receive multiple texts. Each text is DIFFERENT and must receive a DIFFERENT, UNIQUE translation. Never translate two different source texts to the same target text. If texts seem similar (e.g. "TE REŽEJO?" vs "TE DRGNEJO?"), they have DIFFERENT meanings - translate each one accurately and distinctly.`
             }, {
                 role: 'user',
                 content: `Translate these Slovenian marketing texts. Make them sound like a NATIVE SPEAKER wrote them:
