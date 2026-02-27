@@ -2048,7 +2048,7 @@
             
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/launches/api/upload-video', true);
+                xhr.open('POST', '/api/upload-video', true);
                 xhr.onload = async function() {
                     if (xhr.status >= 200 && xhr.status < 300) {
                         const data = JSON.parse(xhr.responseText);
@@ -2085,7 +2085,7 @@
                             // Auto-detect scene cuts
                             try {
                                 console.log('[Mode1] Calling smart-analyze for:', data.filename);
-                                const saResp = await fetch('/launches/api/localizer/smart-analyze', {
+                                const saResp = await fetch('/api/localizer/smart-analyze', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ filename: data.filename })
@@ -2115,7 +2115,7 @@
                                 console.error('[Mode1] ❌ Scene detection failed:', e.message, e);
                                 // Fallback on error: try fetching segments directly
                                 try {
-                                    const resp = await fetch('/launches/api/localizer/smart-analyze', {
+                                    const resp = await fetch('/api/localizer/smart-analyze', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ filename: data.filename })
@@ -2285,7 +2285,7 @@
                     }
                     
                     // Call generate API (starts in background, doesn't wait to finish)
-                    const response = await postJSON('/launches/api/localizer/generate', {
+                    const response = await postJSON('/api/localizer/generate', {
                         videoClean: creative.filename,
                         name: name,
                         namingParts: creative.namingParts,
@@ -2329,7 +2329,7 @@
             
             const pollProgress = setInterval(async () => {
                 try {
-                    const data = await getJSON('/launches/api/localizer/jobs');
+                    const data = await getJSON('/api/localizer/jobs');
                     const activeJobs = (data.jobs || []).filter(j => j.status === 'translating' || j.status === 'generating');
                     const doneJobs = (data.jobs || []).filter(j => j.status === 'done');
                     
@@ -2427,7 +2427,7 @@
                     const { id, date, product, type, author } = creative.namingParts;
                     const name = id + '_' + date + '_' + product + '_' + type + '_' + author;
                     
-                    await postJSON('/launches/api/queue/add', {
+                    await postJSON('/api/queue/add', {
                         mode: 'library',
                         name: name,
                         namingParts: creative.namingParts,
@@ -3470,7 +3470,7 @@
             // Generate preview
             try {
                 console.log('Sending preview with style:', selectedStyle, 'fontSize:', fontSize, 'hookStyle:', hookStyle, 'ctaStyle:', ctaStyleValue);
-                const data = await postJSON('/launches/api/localizer/preview', {
+                const data = await postJSON('/api/localizer/preview', {
                     videoClean: videoFile, name, texts, language: 'SLO', style: selectedStyle, fontSize,
                     hookStyle: useHookStyle ? hookStyle : null,
                     ctaStyle: useCtaStyle ? ctaStyleValue : null
@@ -3538,16 +3538,16 @@
             document.getElementById('btn-generate').disabled = true;
             
             try {
-                const data = await postJSON('/launches/api/localizer/generate', {
+                const data = await postJSON('/api/localizer/generate', {
                     videoClean: uploadedFilename, name, texts, style: selectedStyle, fontSize, namingParts
                 });
                 if (data.error) throw new Error(data.error);
                 
                 while (true) {
-                    const job = await getJSON(`/launches/api/localizer/job/${data.jobId}`);
+                    const job = await getJSON(`/api/localizer/job/${data.jobId}`);
                     if (job.status === 'done') {
                         alert('✅ Končano! 7 videov pripravljenih.');
-                        window.location.href = `/launches/api/localizer/job/${data.jobId}/zip`;
+                        window.location.href = `/api/localizer/job/${data.jobId}/zip`;
                         break;
                     } else if (job.status === 'error') { throw new Error(job.error); }
                     const pct = Math.round(((job.completed || 0) / 7) * 100);
@@ -3620,7 +3620,7 @@
                 formData.append('video', file, file.name);
                 
                 try {
-                    const response = await fetch('/launches/api/upload-video', {
+                    const response = await fetch('/api/upload-video', {
                         method: 'POST',
                         body: formData
                     });
@@ -3790,7 +3790,7 @@
             const videoPreview = document.getElementById('video-preview-2');
             if (pair.textFilename) {
                 videoPreviewSection.style.display = 'block';
-                videoPreview.src = `/launches/uploads/${pair.textFilename}`;
+                videoPreview.src = `/uploads/${pair.textFilename}`;
             } else {
                 videoPreviewSection.style.display = 'none';
             }
@@ -3858,7 +3858,7 @@
             document.getElementById('pair-analysis-status').innerHTML = '⏳ Analiziram...';
             
             try {
-                const response = await fetch('/launches/api/localizer/analyze', {
+                const response = await fetch('/api/localizer/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ filename: pair.textFilename, mode: 'competitor' })
@@ -3969,7 +3969,7 @@
                 renderPairsList();
                 
                 try {
-                    const response = await fetch('/launches/api/localizer/analyze', {
+                    const response = await fetch('/api/localizer/analyze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename: pair.textFilename, mode: 'competitor' })
@@ -4071,7 +4071,7 @@
                 try {
                     const name = `${pair.id}_${date}_${pair.product}_${pair.type}_${pair.author}`;
                     
-                    await postJSON('/launches/api/localizer/generate', {
+                    await postJSON('/api/localizer/generate', {
                         videoClean: pair.cleanFilename,
                         name: name,
                         namingParts: { id: pair.id, date, product: pair.product, type: pair.type, author: pair.author },
@@ -4133,7 +4133,7 @@
                 try {
                     const name = `${pair.id}_${date}_${pair.product}_${pair.type}_${pair.author}`;
                     
-                    await postJSON('/launches/api/queue/add', {
+                    await postJSON('/api/queue/add', {
                         mode: 'localize',
                         name: name,
                         namingParts: { id: pair.id, date, product: pair.product, type: pair.type, author: pair.author },
@@ -4491,7 +4491,7 @@
             btn.disabled = true;
             
             try {
-                const transData = await postJSON('/launches/api/localizer/to-slovenian', {
+                const transData = await postJSON('/api/localizer/to-slovenian', {
                     texts: detectedTexts.map(t => t.text)
                 });
                 
@@ -4586,7 +4586,7 @@
             }
             
             try {
-                const data = await postJSON('/launches/api/queue/add', {
+                const data = await postJSON('/api/queue/add', {
                     mode: 'library',
                     name,
                     namingParts,
@@ -4628,7 +4628,7 @@
             }
             
             try {
-                const data = await postJSON('/launches/api/queue/add', {
+                const data = await postJSON('/api/queue/add', {
                     mode: 'localize',
                     name,
                     namingParts,
@@ -4666,7 +4666,7 @@
         // Refresh queue list
         window.refreshQueue = async function() {
             try {
-                const data = await getJSON('/launches/api/queue/list');
+                const data = await getJSON('/api/queue/list');
                 // Filter out completed jobs - they're visible in Downloads
                 const queue = (data.queue || []).filter(job => job.status !== 'done');
                 
@@ -4699,7 +4699,7 @@
         window.removeFromQueue = async function(jobId) {
             if (!confirm('Odstrani iz vrste?')) return;
             try {
-                await postJSON('/launches/api/queue/remove', { jobId });
+                await postJSON('/api/queue/remove', { jobId });
                 refreshQueue();
             } catch(e) {
                 alert('Napaka: ' + e.message);
@@ -4710,7 +4710,7 @@
         window.processQueueNow = async function() {
             if (!confirm('Začni procesiranje vseh v vrsti ZDAJ?')) return;
             try {
-                const data = await postJSON('/launches/api/queue/process', {});
+                const data = await postJSON('/api/queue/process', {});
                 alert(`🚀 Procesiranje začeto! ${data.count} job(s) v vrsti.`);
                 refreshQueue();
             } catch(e) {
@@ -4752,7 +4752,7 @@
         
         async function loadDownloads() {
             try {
-                const response = await fetch('/launches/api/localizer/jobs');
+                const response = await fetch('/api/localizer/jobs');
                 const data = await response.json();
                 allDownloadJobs = (data.jobs || []).sort((a, b) => new Date(b.created) - new Date(a.created));
                 filterDownloads(); // Apply current tab filter
@@ -4825,7 +4825,7 @@
                         const isDownloaded = downloadedItems[key];
                         const bg = isDownloaded ? '#7f1d1d' : '#1a1a1a';
                         const border = isDownloaded ? '#ef4444' : '#333';
-                        html += '<a href="/launches/api/localizer/job/' + job.id + '/video/' + lang + '" download onclick="markDownloaded(\'' + key + '\')" style="display:flex; align-items:center; gap:6px; padding:8px; background:' + bg + '; border-radius:6px; text-decoration:none; color:#fff; font-size:13px; border:1px solid ' + border + ';">';
+                        html += '<a href="/api/localizer/job/' + job.id + '/video/' + lang + '" download onclick="markDownloaded(\'' + key + '\')" style="display:flex; align-items:center; gap:6px; padding:8px; background:' + bg + '; border-radius:6px; text-decoration:none; color:#fff; font-size:13px; border:1px solid ' + border + ';">';
                         html += '<span>' + FLAGS[lang] + '</span>';
                         html += '<span>' + lang + '</span>';
                         html += '</a>';
@@ -4849,7 +4849,7 @@
             if (!confirm('Ali res želiš izbrisati to kreativo?')) return;
             
             try {
-                const response = await fetch('/launches/api/localizer/job/' + jobId, {
+                const response = await fetch('/api/localizer/job/' + jobId, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ author: currentUser })
