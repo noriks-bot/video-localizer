@@ -3775,9 +3775,17 @@ function getProductTypeFromCode(code, name) {
 }
 // ============ END PACKING API ============
 
-// Serve index.html for root
+// Serve library.html as main entry point
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    // Try public/ first (production), then root (dev)
+    const publicPath = path.join(__dirname, 'public', 'library.html');
+    const rootPath = path.join(__dirname, 'library.html');
+    const fs = require('fs');
+    if (fs.existsSync(publicPath)) {
+        res.sendFile(publicPath);
+    } else {
+        res.sendFile(rootPath);
+    }
 });
 
 app.listen(PORT, () => {
