@@ -1673,7 +1673,7 @@ If no added text overlay visible, return: {"texts": []}` },
                             end: timestamp + frameInterval,
                             description: parsed.description || `Scene ${segments.length + 1}`,
                             emotion: parsed.emotion || 'neutral',
-                            thumbnail: `/launches/uploads/analysis/${jobId}/${frames[i]}`
+                            thumbnail: `/uploads/analysis/${jobId}/${frames[i]}`
                         });
                         
                         lastDescription = parsed.description || '';
@@ -2226,7 +2226,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         
         res.json({ 
             success: true, 
-            videoUrl: `/launches/uploads/previews/${jobId}/${name}-preview.mp4` 
+            videoUrl: `/uploads/previews/${jobId}/${name}-preview.mp4` 
         });
         
     } catch (e) {
