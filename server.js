@@ -30,10 +30,8 @@ const upload = multer({
     }
 });
 
-const { addVoiceover } = require('./scripts/voiceover');
-
 const app = express();
-const PORT = process.env.PORT || 3007;
+const PORT = 3006;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 
@@ -2240,7 +2238,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 // Generate all 7 country videos
 app.post('/api/localizer/generate', async (req, res) => {
     console.log('Generate request:', JSON.stringify(req.body, null, 2));
-    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase, voiceover, voiceId } = req.body;
+    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase } = req.body;
     if (!videoClean || !texts?.length) {
         console.log('Generate 400: videoClean=', videoClean, 'texts=', texts);
         return res.status(400).json({ error: 'Missing data: videoClean=' + !!videoClean + ' texts=' + (texts?.length || 0) });
@@ -2272,8 +2270,6 @@ app.post('/api/localizer/generate', async (req, res) => {
         ctaStyle: ctaStyle || null,   // Style for cta texts
         perTextStyles: perTextStyles || false, // Enable per-text style overrides
         uppercase: uppercase || false, // All caps mode
-        voiceover: voiceover || false, // Enable ElevenLabs voiceover
-        voiceId: voiceId || null, // Custom ElevenLabs voice ID
         countries: selectedCountries, // Selected countries to generate
         source: source || 'library', // 'library' or 'localize'
         status: 'translating',
@@ -2571,6 +2567,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         job.texts.forEach((t, i) => {
             const translatedText = translations[i]?.[lang];
             let text = translatedText || t.text;
+            if (!text || !text.trim()) return; // Skip empty texts
             if (job.uppercase) text = text.toUpperCase();
             
             if (i === 0) {
@@ -2598,7 +2595,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             }
             
             const pixelX = 540;
-            const pixelY = (t.y !== undefined) ? Math.round((t.y / 100) * 1920) : 900;
+            const pixelY = 900; // Always center position
             const posOverride = `\\an5\\pos(${pixelX},${pixelY})`;
             
             ass += `Dialogue: 0,${start},${end},${styleName},,0,0,0,,{${posOverride}\\fad(200,200)}${text}\n`;
@@ -2640,25 +2637,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             await execPromise(`${FFMPEG} -y -i "${videoPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -c:v libx264 -preset fast -crf 23 -c:a copy "${outVideo}" 2>/dev/null`);
         }
         
-        // Add voiceover if enabled
-        if (job.voiceover) {
-            try {
-                console.log(`[${job.id}] Adding voiceover for ${lang}...`);
-                const voiceoverVideo = outVideo.replace('.mp4', '-vo.mp4');
-                await addVoiceover(outVideo, assPath, voiceoverVideo, {
-                    voiceId: job.voiceId || undefined,
-                    originalVolume: 0.12,
-                    voiceoverVolume: 3.0
-                });
-                // Replace original with voiceover version
-                fs.renameSync(voiceoverVideo, outVideo);
-                console.log(`[${job.id}] Voiceover added for ${lang}`);
-            } catch (voErr) {
-                console.error(`[${job.id}] Voiceover error for ${lang}:`, voErr.message);
-                // Continue without voiceover - video still has subtitles
-            }
-        }
-
         job.outputs[lang] = outVideo;
         job.completed = langIdx + 1;
         
