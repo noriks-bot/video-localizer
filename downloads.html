@@ -179,7 +179,7 @@
                         style="padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); 
                         background: rgba(255,255,255,0.1); color: #fff; font-size: 14px; width: 220px;">
                 </div>
-                <a href="/launches/video-localizer/library.html" class="btn">← Nazaj</a>
+                <a href="/library.html" class="btn">← Nazaj</a>
             </div>
         </header>
         
@@ -321,12 +321,12 @@
         async function loadJobs() {
             try {
                 // Load in-progress jobs
-                const jobsResponse = await fetch('/launches/api/localizer/jobs');
+                const jobsResponse = await fetch('/api/localizer/jobs');
                 const jobsData = await jobsResponse.json();
                 renderInProgressJobs(jobsData.jobs || []);
                 
                 // Load completed videos
-                const response = await fetch('/launches/api/localizer/generated-videos');
+                const response = await fetch('/api/localizer/generated-videos');
                 const data = await response.json();
                 
                 if (!data.jobs || data.jobs.length === 0) {
@@ -335,7 +335,7 @@
                             <div class="empty-icon">📭</div>
                             <p>Ni še generiranih videov</p>
                             <p style="margin-top: 10px;">
-                                <a href="/launches/video-localizer/library.html" class="btn btn-success">Ustvari nov video</a>
+                                <a href="/library.html" class="btn btn-success">Ustvari nov video</a>
                             </p>
                         </div>
                     `;
@@ -393,7 +393,7 @@
                                     <div class="video-name">${countryName}</div>
                                     <div class="video-size">${formatSize(video.size)}</div>
                                 </div>
-                                <a href="/launches/uploads/generated/${job.id}/${video.name}" 
+                                <a href="/uploads/generated/${job.id}/${video.name}" 
                                    download="${video.name}" class="btn btn-sm btn-success">
                                     ⬇️ Download
                                 </a>
@@ -419,7 +419,7 @@
                         const flag = FLAGS[country] || '🏳️';
                         
                         html += `
-                            <a href="/launches/uploads/generated/${job.id}/${video.name}" 
+                            <a href="/uploads/generated/${job.id}/${video.name}" 
                                download="${video.name}" class="btn btn-sm">
                                 ${flag}
                             </a>
@@ -467,7 +467,7 @@
             if (!confirm('Res želiš prekiniti generiranje?')) return;
             
             try {
-                const response = await fetch(`/launches/api/localizer/job/${jobId}/cancel`, {
+                const response = await fetch(`/api/localizer/job/${jobId}/cancel`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -488,7 +488,7 @@
             if (!confirm('Res želiš zbrisati vse videe?')) return;
             
             try {
-                const response = await fetch(`/launches/api/localizer/job/${jobId}`, {
+                const response = await fetch(`/api/localizer/job/${jobId}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
