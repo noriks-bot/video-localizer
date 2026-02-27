@@ -20,8 +20,13 @@ const upload = multer({
     storage,
     limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('video/')) cb(null, true);
-        else cb(new Error('Only video files allowed'));
+        const ext = (file.originalname || '').toLowerCase();
+        const videoExts = ['.mp4','.mov','.avi','.mkv','.webm','.m4v','.wmv','.flv'];
+        if (file.mimetype.startsWith('video/') || videoExts.some(e => ext.endsWith(e))) {
+            cb(null, true);
+        } else {
+            cb(null, false);
+        }
     }
 });
 
