@@ -1191,6 +1191,10 @@
                                 </div>
                             </div>
                             
+                            <label style="display:inline-flex;align-items:center;gap:6px;margin-right:10px;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.7);">
+                                <input type="checkbox" id="voiceover-toggle" style="width:16px;height:16px;cursor:pointer;">
+                                🔊 Voiceover
+                            </label>
                             <button class="btn btn-secondary" onclick="queueAllCreatives()" id="btn-queue" disabled>🌙 Dodaj v vrsto</button>
                             <button class="btn btn-primary" onclick="generateAllCreatives()" id="btn-generate" disabled>🚀 Generiraj</button>
                         </div>
@@ -2297,9 +2301,10 @@
                         countries: selectedCountries,
                         source: 'library',
                         perTextStyles: true,
-                        uppercase: creative.uppercase || false
+                        uppercase: creative.uppercase || false,
+                        voiceover: document.getElementById('voiceover-toggle')?.checked || false
                     });
-                    console.log('Started generation for:', name, response);
+                    console.log('Started generation for:', name, 'voiceover:', document.getElementById('voiceover-toggle')?.checked, response);
                     
                     started++;
                     document.getElementById('btn-generate').textContent = `⏳ Startal ${started}/${readyCreatives.length}`;
