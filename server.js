@@ -31,7 +31,7 @@ const upload = multer({
 });
 
 const app = express();
-const PORT = 3006;
+const PORT = process.env.PORT || 3007;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 
@@ -2016,7 +2016,7 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
         
         // Step 1: Measure text with word wrap using caption: (auto-wraps to fit width)
         // First measure single line to check if wrapping needed
-        const measureCmd = `convert -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -gravity center label:"${text}" -format "%wx%h" info:`;
+        const measureCmd = `convert -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -gravity center label:"${text}" -format "%wx%h" info:`;
         let singleW = 9999, singleH = scaledFontSize;
         try {
             const { stdout } = await execPromise(measureCmd);
@@ -2031,7 +2031,7 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
         if (useCaption) {
             // Text too wide - use caption: with fixed width for word wrapping
             const captionW = maxTextWidth;
-            const measureWrapCmd = `convert -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -size ${captionW}x -gravity center caption:"${text}" -format "%wx%h" info:`;
+            const measureWrapCmd = `convert -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -size ${captionW}x -gravity center caption:"${text}" -format "%wx%h" info:`;
             try {
                 const { stdout } = await execPromise(measureWrapCmd);
                 const parts = stdout.trim().split('x');
@@ -2058,8 +2058,8 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
             : `-gravity center -annotate +0+0 "${text}"`;
         
         const cmd = useCaption
-            ? `convert \\( -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} \\) \\( -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -fill "${cfg.text}" -background none -size ${imgW - paddingX * 2}x -gravity center caption:"${text}" \\) -gravity center -composite PNG32:"${pngPath}"`
-            : `convert -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} -stroke none -fill "${cfg.text}" -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -gravity center -annotate +0+0 "${text}" PNG32:"${pngPath}"`;
+            ? `convert \\( -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} \\) \\( -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -fill "${cfg.text}" -background none -size ${imgW - paddingX * 2}x -gravity center caption:"${text}" \\) -gravity center -composite PNG32:"${pngPath}"`
+            : `convert -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} -stroke none -fill "${cfg.text}" -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -gravity center -annotate +0+0 "${text}" PNG32:"${pngPath}"`;
         await execPromise(cmd);
         
         // Calculate position (centered horizontally)
@@ -2079,38 +2079,38 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
 // BorderStyle=3 = opaque box, OutlineColour = box color, BackColour = box shadow
 const assStyles = {
     // White box, black text (classic) - BorderStyle=3 for opaque box
-    white: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    white: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Black box, white text  
-    black: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    black: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // No box, just shadow
-    shadow: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,0,5,5,50,50,200,1',
+    shadow: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,0,5,5,50,50,200,1',
     // Smaller padding (looks rounder)
-    rounded: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    rounded: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Green box (NORIKS brand)
-    gradient: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    gradient: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // White outline, no fill
-    outline: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,0,5,50,50,200,1',
+    outline: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,0,5,50,50,200,1',
     // === EXPLOSIVE STYLES FOR HOOK/CTA ===
     // Red box (#ef4444 = BGR: 4444EF)
-    red: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H004444EF,&H004444EF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    red: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H004444EF,&H004444EF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Orange box (#f97316 = BGR: 1673F9)
-    orange: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H001673F9,&H001673F9,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    orange: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H001673F9,&H001673F9,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Yellow box (#eab308 = BGR: 08B3EA)
-    yellow: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H0008B3EA,&H0008B3EA,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    yellow: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H0008B3EA,&H0008B3EA,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Fire - red/orange gradient effect (using red as base)
-    fire: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H000066FF,&H000066FF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    fire: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H000066FF,&H000066FF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Neon cyan on black (#0ff = BGR: FFFF00)
-    neon: 'Style: Default,Noto Sans,72,&H00FFFF00,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    neon: 'Style: Default,Noto Sans Black,72,&H00FFFF00,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Explosive - purple/red (#dc2626 = BGR: 2626DC, #7c3aed)
-    explosive: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00ED3A7C,&H00ED3A7C,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    explosive: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00ED3A7C,&H00ED3A7C,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Green box (#22c55e = BGR: 5EC522)
-    green: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H005EC522,&H005EC522,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    green: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H005EC522,&H005EC522,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Pulse - green gradient
-    pulse: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    pulse: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Urgent - red with gold border (#dc2626 red, #fbbf24 gold)
-    urgent: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H002626DC,&H002626DC,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    urgent: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H002626DC,&H002626DC,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Gold (#fbbf24 = BGR: 24BFFB)
-    gold: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H0024BFFB,&H0024BFFB,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1'
+    gold: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H0024BFFB,&H0024BFFB,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1'
 };
 
 // Generate Slovenian preview video
@@ -2134,7 +2134,7 @@ app.post('/api/localizer/preview', async (req, res) => {
         console.log('[Preview] Per-text styles:', texts.map((t, i) => `[${i}] "${t.text?.substring(0,20)}" style=${t.style}`).join(', '));
         
         const baseStyle = assStyles[style] || assStyles.white;
-        const defaultStyle = baseStyle.replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`);
+        const defaultStyle = baseStyle.replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`);
         
         // Create per-text styles
         const perTextStyleLines = [];
@@ -2144,18 +2144,18 @@ app.post('/api/localizer/preview', async (req, res) => {
             if (s !== style && !usedStyles.has(s)) {
                 usedStyles.add(s);
                 const base = assStyles[s] || assStyles.white;
-                perTextStyleLines.push(base.replace('Style: Default,', `Style: S_${s},`).replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
+                perTextStyleLines.push(base.replace('Style: Default,', `Style: S_${s},`).replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
             }
         });
         
         // Hook/CTA styles
         if (hookStyle && !usedStyles.has(hookStyle)) {
             const base = assStyles[hookStyle] || assStyles.white;
-            perTextStyleLines.push(base.replace('Style: Default,', 'Style: Hook,').replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
+            perTextStyleLines.push(base.replace('Style: Default,', 'Style: Hook,').replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
         }
         if (ctaStyle && !usedStyles.has(ctaStyle)) {
             const base = assStyles[ctaStyle] || assStyles.white;
-            perTextStyleLines.push(base.replace('Style: Default,', 'Style: CTA,').replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
+            perTextStyleLines.push(base.replace('Style: Default,', 'Style: CTA,').replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
         }
         
         let ass = `[Script Info]
@@ -2502,7 +2502,7 @@ Return ONLY valid JSON array:
         
         // Get styles with custom font size
         const baseStyle = assStyles[job.style] || assStyles.white;
-        const defaultStyle = baseStyle.replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
+        const defaultStyle = baseStyle.replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
         
         // Create Hook and CTA styles if specified
         let hookStyleLine = '';
@@ -2512,14 +2512,14 @@ Return ONLY valid JSON array:
             const hookBase = assStyles[job.hookStyle] || assStyles.white;
             hookStyleLine = hookBase
                 .replace('Style: Default,', 'Style: Hook,')
-                .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
+                .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
         }
         
         if (job.ctaStyle) {
             const ctaBase = assStyles[job.ctaStyle] || assStyles.white;
             ctaStyleLine = ctaBase
                 .replace('Style: Default,', 'Style: CTA,')
-                .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
+                .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
         }
         
         // Build styles - if perTextStyles, create style for each unique style used
@@ -2537,7 +2537,7 @@ Return ONLY valid JSON array:
                 const styleBase = assStyles[styleName] || assStyles.white;
                 const styleFormatted = styleBase
                     .replace('Style: Default,', `Style: ${styleName},`)
-                    .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
+                    .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
                 additionalStyles += styleFormatted + '\n';
             });
         }
