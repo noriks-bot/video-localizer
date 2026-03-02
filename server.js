@@ -30,8 +30,10 @@ const upload = multer({
     }
 });
 
+const { addVoiceover } = require("./scripts/voiceover");
+
 const app = express();
-const PORT = 3006;
+const PORT = process.env.PORT || 3007;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 
@@ -968,7 +970,7 @@ const archiver = require('archiver');
 
 // Start localization job
 app.post('/api/localize', async (req, res) => {
-    const { videoWithText, videoClean, name } = req.body;
+    const { videoWithText, videoClean, name, voiceover } = req.body;
     if (!videoWithText || !videoClean) {
         return res.status(400).json({ error: 'Missing videos' });
     }
@@ -979,6 +981,7 @@ app.post('/api/localize', async (req, res) => {
         name: name || jobId,
         videoWithText,
         videoClean,
+        voiceover: voiceover || false,
         status: 'analyzing',
         progress: 0,
         completed: 0,
@@ -1194,6 +1197,29 @@ async function processLocalizationJob(job) {
         const outVideo = path.join(outputDir, `${job.name}-${lang}.mp4`);
         await execPromise(`ffmpeg -y -i "${videoCleanPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -c:a copy "${outVideo}" 2>/dev/null`);
         
+        // Add voiceover if enabled
+        if (job.voiceover) {
+            try {
+                console.log(`[${job.id}] Adding voiceover for ${lang}...`);
+                const voTexts = segments.map((seg, i) => ({
+                    start: seg.start,
+                    end: seg.end,
+                    text: translations[i]?.[lang] || seg.text
+                }));
+                const voiceoverVideo = outVideo.replace('.mp4', '-vo.mp4');
+                await addVoiceover(outVideo, assPath, voiceoverVideo, {
+                    texts: voTexts,
+                    lang: lang,
+                    originalVolume: 0.12,
+                    voiceoverVolume: 3.0
+                });
+                fs.renameSync(voiceoverVideo, outVideo);
+                console.log(`[${job.id}] Voiceover added for ${lang}`);
+            } catch (voErr) {
+                console.error(`[${job.id}] Voiceover error for ${lang}:`, voErr.message);
+            }
+        }
+
         job.outputs[lang] = outVideo;
         job.completed = langIdx + 1;
         job.progress = Math.round(((langIdx + 1) / LANGUAGES.length) * 100);
@@ -2116,7 +2142,7 @@ const assStyles = {
 // Generate Slovenian preview video
 app.post('/api/localizer/preview', async (req, res) => {
     console.log('Preview request received:', req.body);
-    const { videoClean, name, texts, language, style, fontSize = 72, hookStyle, ctaStyle } = req.body;
+    const { videoClean, name, texts, language, style, fontSize = 72, hookStyle, ctaStyle, voiceover } = req.body;
     if (!videoClean || !texts?.length) {
         console.log('Preview missing data:', { videoClean, textsLength: texts?.length });
         return res.status(400).json({ error: 'Missing data' });
@@ -2186,11 +2212,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             const end = formatAssTime(t.end);
             let styleName = (resolvedStyle !== style) ? `S_${resolvedStyle}` : 'Default';
             
-            let pos = '\\an5\\pos(540,960)';
-            if (t.position === 'center-top') pos = '\\an5\\pos(540,880)';
-            else if (t.position === 'center-bottom') pos = '\\an5\\pos(540,1000)';
-            else if (t.position === 'top') pos = '\\an8';
-            else if (t.position === 'bottom') pos = '\\an2';
+            // Use original y% position from OCR for accurate placement
+            const pixelX = 540;
+            const pixelY = (t.y !== undefined) ? Math.round((t.y / 100) * 1920) : 960;
+            let pos = `\\an5\\pos(${pixelX},${pixelY})`;
             
             ass += `Dialogue: 0,${start},${end},${styleName},,0,0,0,,{${pos}\\fad(200,200)}${t.text}\n`;
         });
@@ -2224,6 +2249,24 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             await execPromise(`${FFMPEG} -y -i "${videoPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -c:v libx264 -preset fast -crf 23 -c:a copy "${outputVideo}" 2>/dev/null`);
         }
         
+        // Add voiceover if enabled
+        if (voiceover) {
+            try {
+                console.log(`[Preview] Adding voiceover...`);
+                const voiceoverVideo = outputVideo.replace('.mp4', '-vo.mp4');
+                await addVoiceover(outputVideo, assPath, voiceoverVideo, {
+                    texts: texts,
+                    lang: 'SI',
+                    originalVolume: 0.12,
+                    voiceoverVolume: 3.0
+                });
+                fs.renameSync(voiceoverVideo, outputVideo);
+                console.log(`[Preview] Voiceover added`);
+            } catch (voErr) {
+                console.error(`[Preview] Voiceover error:`, voErr.message);
+            }
+        }
+
         res.json({ 
             success: true, 
             videoUrl: `/uploads/previews/${jobId}/${name}-preview.mp4` 
@@ -2237,8 +2280,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 // Generate all 7 country videos
 app.post('/api/localizer/generate', async (req, res) => {
-    console.log('Generate request:', JSON.stringify(req.body, null, 2));
-    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase } = req.body;
+    console.log('Generate request body keys:', Object.keys(req.body));
+    console.log('Generate texts:', (req.body.texts || []).map((t, i) => i + ': ' + (t.text || '').substring(0, 40)).join(' | '));
+    console.log('Generate voiceover:', req.body.voiceover, 'source:', req.body.source);
+    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase, voiceover, voiceId } = req.body;
     if (!videoClean || !texts?.length) {
         console.log('Generate 400: videoClean=', videoClean, 'texts=', texts);
         return res.status(400).json({ error: 'Missing data: videoClean=' + !!videoClean + ' texts=' + (texts?.length || 0) });
@@ -2270,6 +2315,8 @@ app.post('/api/localizer/generate', async (req, res) => {
         ctaStyle: ctaStyle || null,   // Style for cta texts
         perTextStyles: perTextStyles || false, // Enable per-text style overrides
         uppercase: uppercase || false, // All caps mode
+        voiceover: voiceover || false, // Enable ElevenLabs voiceover
+        voiceId: voiceId || null, // Custom ElevenLabs voice ID
         countries: selectedCountries, // Selected countries to generate
         source: source || 'library', // 'library' or 'localize'
         status: 'translating',
@@ -2637,6 +2684,32 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             await execPromise(`${FFMPEG} -y -i "${videoPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -c:v libx264 -preset fast -crf 23 -c:a copy "${outVideo}" 2>/dev/null`);
         }
         
+        // Add voiceover if enabled
+        if (job.voiceover) {
+            try {
+                console.log(`[${job.id}] Adding voiceover for ${lang}...`);
+                // Build translated texts with timing for voiceover
+                const voTexts = job.texts.map((t, i) => ({
+                    start: t.start,
+                    end: t.end,
+                    text: translations[i]?.[lang] || t.text
+                })).filter(t => t.text && t.text.trim());
+                const voiceoverVideo = outVideo.replace('.mp4', '-vo.mp4');
+                await addVoiceover(outVideo, assPath, voiceoverVideo, {
+                    texts: voTexts,
+                    lang: lang,
+                    voiceId: job.voiceId || undefined,
+                    originalVolume: 0.12,
+                    voiceoverVolume: 3.0
+                });
+                // Replace original with voiceover version
+                fs.renameSync(voiceoverVideo, outVideo);
+                console.log(`[${job.id}] Voiceover added for ${lang}`);
+            } catch (voErr) {
+                console.error(`[${job.id}] Voiceover error for ${lang}:`, voErr.message);
+            }
+        }
+
         job.outputs[lang] = outVideo;
         job.completed = langIdx + 1;
         
