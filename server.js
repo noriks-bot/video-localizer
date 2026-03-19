@@ -928,7 +928,7 @@ app.post('/api/translate-texts', async (req, res) => {
                 model: 'gpt-4o',
                 messages: [{
                     role: 'system',
-                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. Maintain any emojis. Return ONLY valid JSON.`
+                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. CRITICAL: NORIKS sells T-SHIRTS (casual, round neck) and BOXER SHORTS. NEVER translate t-shirt as dress shirt/formal shirt. Use: HR=majica, CZ=tričko, PL=koszulka, GR=μπλούζα, IT=maglietta, HU=póló, SK=tričko, BG=тениска, RO=tricou. NEVER use: HR=košulja, CZ=košile, PL=koszula, IT=camicia, HU=ing, SK=košeľa, BG=риза, RO=cămașă. Maintain any emojis. Return ONLY valid JSON.`
                 }, {
                     role: 'user',
                     content: `Translate these marketing texts into ${languages.map(l => LANG_NAMES[l]).join(', ')}:
@@ -1145,7 +1145,7 @@ async function processLocalizationJob(job) {
             model: 'gpt-4o',
             messages: [{
                 role: 'system',
-                content: 'You are a marketing translator for NORIKS men\'s underwear. Keep texts punchy and short.'
+                content: 'You are a marketing translator for NORIKS men\'s underwear. Keep texts punchy and short. T-shirt translations: HR=majica, CZ=tričko, PL=koszulka, IT=maglietta, HU=póló, SK=tričko, BG=тениска, RO=tricou. NEVER use dress shirt words (košulja/košile/koszula/camicia/ing/košeľa/риза/cămașă).'
             }, {
                 role: 'user',
                 content: `Translate to Croatian, Czech, Polish, Greek, Italian, Hungarian, Slovak:\n\n${textsToTranslate.map((t, i) => `${i+1}. "${t}"`).join('\n')}\n\nReturn JSON: [{"HR":"...","CZ":"...","PL":"...","GR":"...","IT":"...","HU":"...","SK":"..."}, ...]`
@@ -1674,7 +1674,7 @@ If no added text overlay visible, return: {"texts": []}` },
                             end: timestamp + frameInterval,
                             description: parsed.description || `Scene ${segments.length + 1}`,
                             emotion: parsed.emotion || 'neutral',
-                            thumbnail: `/launches/uploads/analysis/${jobId}/${frames[i]}`
+                            thumbnail: `/uploads/analysis/${jobId}/${frames[i]}`
                         });
                         
                         lastDescription = parsed.description || '';
@@ -2227,7 +2227,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         
         res.json({ 
             success: true, 
-            videoUrl: `/launches/uploads/previews/${jobId}/${name}-preview.mp4` 
+            videoUrl: `/uploads/previews/${jobId}/${name}-preview.mp4` 
         });
         
     } catch (e) {
@@ -2318,7 +2318,7 @@ async function qualityCheckVideo(videoPath, originalTexts, translations, langCod
         fs.mkdirSync(qcDir, { recursive: true });
         
         // Get texts for this language
-        const textsToCheck = originalTexts.slice(0, 3).map((t, i) => ({
+        const textsToCheck = originalTexts.map((t, i) => ({
             original: t.text,
             translated: translations[i]?.[langCode] || t.text,
             timestamp: t.start
@@ -2447,9 +2447,13 @@ CRITICAL RULES:
 4. Keep texts SHORT and IMPACTFUL (max 5 words ideally)
 5. Brand name "NORIKS" stays unchanged
 6. Adapt idioms/expressions to what natives would say
+8. EACH translation must sound like a NATIVE SPEAKER wrote it - NOT like a translation
+9. If unsure, use the SIMPLEST everyday expression
+10. Test: would a local person on the street say it exactly like this? If not, rephrase.
 7. Target: men buying for themselves OR women buying gifts for partners
 
-Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.`
+Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.
+CRITICAL: T-shirt = casual round-neck shirt. CORRECT translations: HR=majica, CZ=tričko, PL=koszulka, IT=maglietta, HU=póló, SK=tričko, BG=тениска, RO=tricou. NEVER use dress shirt words (košulja/košile/koszula/camicia/ing/košeľa/риза/cămașă).`
             }, {
                 role: 'user',
                 content: `Translate these Slovenian marketing texts. Make them sound like a NATIVE SPEAKER wrote them:
@@ -2575,6 +2579,25 @@ ${additionalStyles}
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 `;
         
+        // NATIVE SPEAKER PROOFREAD - fix awkward translations before rendering
+        try {
+            const textsForLang = job.texts.map((t, idx) => translations[idx]?.[lang] || t.text);
+            const proofResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + OPENAI_API_KEY },
+                body: JSON.stringify({ model: "gpt-4o-mini", messages: [{
+                    role: "system", content: "You are a NATIVE " + LANG_NAMES[lang] + " speaker. Review these marketing texts. Fix any that sound unnatural, have wrong grammar, or would confuse a native speaker. T-shirt = casual round-neck (majica/tričko/koszulka/maglietta/póló/тениска/tricou), NEVER dress shirt. Return ONLY a JSON array of corrected texts in the same order. If a text is fine, keep it unchanged."
+                }, { role: "user", content: JSON.stringify(textsForLang) }], max_tokens: 1500 })
+            });
+            const proofData = await proofResponse.json();
+            const proofContent = proofData.choices?.[0]?.message?.content || "[]";
+            const proofMatch = proofContent.match(/\[([\s\S]*?)\]/);
+            if (proofMatch) {
+                const fixed = JSON.parse("[" + proofMatch[1] + "]");
+                fixed.forEach((f, idx) => { if (f && translations[idx]) translations[idx][lang] = f; });
+                console.log("[" + job.id + "] Proofread " + lang + ": " + fixed.length + " texts checked");
+            }
+        } catch(pe) { console.error("[" + job.id + "] Proofread error " + lang + ":", pe.message); }
         const roundedTextIndicesGen = [];
         job.texts.forEach((t, i) => {
             const translatedText = translations[i]?.[lang];
@@ -2842,7 +2865,8 @@ CRITICAL RULES:
 3. Keep the same casual, friendly tone as the original
 4. Sentences should be SHORT and easy to speak (2-4 seconds each)
 5. Brand name "NORIKS" stays unchanged
-6. Think: how would a local friend recommend this product?`
+6. Think: how would a local friend recommend this product?
+7. CRITICAL: T-shirt = casual round-neck. Use: HR=majica, CZ=tričko, PL=koszulka, IT=maglietta, HU=póló, SK=tričko, BG=тениска, RO=tricou. NEVER use dress shirt words (košulja/košile/koszula/camicia/ing/košeľa/риза/cămașă).`
             }, {
                 role: 'user',
                 content: `Translate these Slovenian voice-over sentences. They will be READ ALOUD, so make them sound natural:
@@ -2888,6 +2912,25 @@ Return ONLY valid JSON array:
         job.currentLang = lang;
         console.log(`[${job.id}] [VO] Generating ${lang}...`);
         
+        // NATIVE SPEAKER PROOFREAD for voiceover
+        try {
+            const voTextsForLang = job.voiceoverScript.map((s, idx) => translations[idx]?.[lang] || s.text);
+            const vpResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + OPENAI_API_KEY },
+                body: JSON.stringify({ model: "gpt-4o-mini", messages: [{
+                    role: "system", content: "You are a NATIVE " + LANG_NAMES[lang] + " speaker. These are voice-over sentences that will be READ ALOUD. Fix any that sound unnatural or have grammar issues. They must sound perfect when spoken. T-shirt = casual (majica/tričko/koszulka/maglietta/póló/тениска/tricou). Return ONLY a JSON array of corrected texts."
+                }, { role: "user", content: JSON.stringify(voTextsForLang) }], max_tokens: 1500 })
+            });
+            const vpData = await vpResponse.json();
+            const vpContent = vpData.choices?.[0]?.message?.content || "[]";
+            const vpMatch = vpContent.match(/\[([\s\S]*?)\]/);
+            if (vpMatch) {
+                const vFixed = JSON.parse("[" + vpMatch[1] + "]");
+                vFixed.forEach((f, idx) => { if (f && translations[idx]) translations[idx][lang] = f; });
+                console.log("[" + job.id + "] [VO] Proofread " + lang + ": " + vFixed.length + " texts checked");
+            }
+        } catch(vpe) { console.error("[" + job.id + "] [VO] Proofread error " + lang + ":", vpe.message); }
         // Get translated texts for this language
         const langTexts = job.voiceoverScript.map((s, i) => {
             const translated = translations[i]?.[lang] || s.text;
