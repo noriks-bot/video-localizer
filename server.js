@@ -80,7 +80,7 @@ function loadData() {
         return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
     } catch (e) {
         return {
-            countries: ["HR", "CZ", "PL", "GR", "IT", "HU", "SK"],
+            countries: ["HR", "CZ", "PL", "GR", "IT", "HU", "SK", "BG", "RO"],
             defaultTasks: [],
             assignees: ["Ajda", "Dejan", "Grega", "Petra", "Teja"],
             countryData: {}
@@ -521,11 +521,13 @@ const localNames = {
     gr: ['Νίκος Παπαδόπουλος', 'Μαρία Κωνσταντίνου', 'Γιώργος Αντωνίου', 'Ελένη Νικολάου', 'Δημήτρης Γεωργίου'],
     it: ['Marco Rossi', 'Giuseppe Russo', 'Francesca Bianchi', 'Alessandra Ferrari', 'Luca Esposito', 'Giulia Romano'],
     hu: ['Kovács Péter', 'Nagy Ágnes', 'Szabó Tamás', 'Tóth Katalin', 'Horváth Gábor', 'Varga Eszter'],
-    sk: ['Ján Horváth', 'Peter Kováč', 'Mária Nagyová', 'Anna Szabová', 'Tomáš Baláž', 'Zuzana Tóthová']
+    sk: ['Ján Horváth', 'Peter Kováč', 'Mária Nagyová', 'Anna Szabová', 'Tomáš Baláž', 'Zuzana Tóthová'],
+    bg: ['Георги Иванов', 'Димитър Петров', 'Мария Георгиева', 'Ивана Димитрова', 'Николай Тодоров', 'Елена Стоянова'],
+    ro: ['Andrei Popescu', 'Ion Ionescu', 'Maria Popa', 'Elena Dumitrescu', 'Alexandru Stan', 'Ana Gheorghe']
 };
 
 const languages = {
-    hr: 'Croatian', cz: 'Czech', pl: 'Polish', gr: 'Greek', it: 'Italian', hu: 'Hungarian', sk: 'Slovak'
+    hr: 'Croatian', cz: 'Czech', pl: 'Polish', gr: 'Greek', it: 'Italian', hu: 'Hungarian', sk: 'Slovak', bg: 'Bulgarian', ro: 'Romanian'
 };
 
 const productNames = {
@@ -535,7 +537,9 @@ const productNames = {
     gr: { boxers: 'μποξεράκια', tshirt: 'μπλούζα', set: 'σετ' },
     it: { boxers: 'boxer', tshirt: 'maglietta', set: 'set' },
     hu: { boxers: 'boxerrel', tshirt: 'pólóval', set: 'szettel' },
-    sk: { boxers: 'boxerkami', tshirt: 'tričkom', set: 'setom' }
+    sk: { boxers: 'boxerkami', tshirt: 'tričkom', set: 'setom' },
+    bg: { boxers: 'боксерки', tshirt: 'тениска', set: 'комплект' },
+    ro: { boxers: 'boxeri', tshirt: 'tricou', set: 'set' }
 };
 
 app.post('/api/social-proof/generate', async (req, res) => {
@@ -617,7 +621,7 @@ Write ONLY the title in ${lang}, nothing else.`;
         const daysAgo = Math.floor(Math.random() * 30) + 1;
         const date = new Date();
         date.setDate(date.getDate() - daysAgo);
-        const dateStr = date.toLocaleDateString(country === 'gr' ? 'el-GR' : `${country}-${country.toUpperCase()}`, { 
+        const dateStr = date.toLocaleDateString(country === 'gr' ? 'el-GR' : country === 'bg' ? 'bg-BG' : country === 'ro' ? 'ro-RO' : `${country}-${country.toUpperCase()}`, { 
             day: 'numeric', month: 'short', year: 'numeric' 
         });
         
@@ -644,9 +648,9 @@ app.post('/api/generate-review', async (req, res) => {
     const lang = languages[country.toLowerCase()] || 'English';
     
     const productMap = {
-        boxers: { en: 'boxer shorts', hr: 'boksarice', cz: 'boxerky', pl: 'bokserki', gr: 'μποξεράκια', it: 'boxer', hu: 'boxer', sk: 'boxerky' },
-        tshirt: { en: 't-shirt', hr: 'majica', cz: 'tričko', pl: 'koszulka', gr: 'μπλούζα', it: 'maglietta', hu: 'póló', sk: 'tričko' },
-        set: { en: 'underwear set', hr: 'komplet', cz: 'set', pl: 'zestaw', gr: 'σετ', it: 'set', hu: 'szett', sk: 'set' }
+        boxers: { en: 'boxer shorts', hr: 'boksarice', cz: 'boxerky', pl: 'bokserki', gr: 'μποξεράκια', it: 'boxer', hu: 'boxer', sk: 'boxerky', bg: 'боксерки', ro: 'boxeri' },
+        tshirt: { en: 't-shirt', hr: 'majica', cz: 'tričko', pl: 'koszulka', gr: 'μπλούζα', it: 'maglietta', hu: 'póló', sk: 'tričko', bg: 'тениска', ro: 'tricou' },
+        set: { en: 'underwear set', hr: 'komplet', cz: 'set', pl: 'zestaw', gr: 'σετ', it: 'set', hu: 'szett', sk: 'set', bg: 'комплект', ro: 'set' }
     };
     
     const praiseMap = {
@@ -908,7 +912,7 @@ app.post('/api/translate-texts', async (req, res) => {
         'GR': 'Greek',
         'IT': 'Italian',
         'HU': 'Hungarian',
-        'SK': 'Slovak'
+        'SK': 'Slovak', 'BG': 'Bulgarian', 'RO': 'Romanian'
     };
     
     try {
@@ -1049,7 +1053,7 @@ app.get('/api/localize/:id/download', (req, res) => {
 
 // Process localization job
 async function processLocalizationJob(job) {
-    const LANGUAGES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK'];
+    const LANGUAGES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
     const outputDir = path.join(__dirname, 'uploads', 'localized', job.id);
     fs.mkdirSync(outputDir, { recursive: true });
     
@@ -1521,6 +1525,7 @@ If no added text overlay visible, return: {"texts": []}` },
                 });
                 
                 const data = await response.json();
+                console.error(`[${jobId}] FULL API RESP frame ${i}:`, JSON.stringify(data).substring(0, 600));
                 const content = data.choices?.[0]?.message?.content || '{}';
                 
                 // DEBUG: Log raw response for first 3 frames and any frames with text
@@ -2252,7 +2257,7 @@ app.post('/api/localizer/generate', async (req, res) => {
     if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video not found' });
     
     // Validate and default countries
-    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK'];
+    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
     const selectedCountries = (countries && Array.isArray(countries) && countries.length > 0) 
         ? countries.filter(c => ALL_COUNTRIES.includes(c))
         : ALL_COUNTRIES;
@@ -2400,9 +2405,9 @@ Return JSON array with verdicts:
 
 async function generateAllCountries(job, videoPath) {
     // Use job.countries if specified, otherwise default to all
-    const LANGUAGES = job.countries || ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK'];
+    const LANGUAGES = job.countries || ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
     const LANG_NAMES = {
-        HR: 'Croatian', CZ: 'Czech', PL: 'Polish', 
+        HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian', 
         GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak'
     };
     
@@ -2824,7 +2829,7 @@ app.post('/api/queue/add', (req, res) => {
     }
     
     // Validate countries
-    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK'];
+    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
     const selectedCountries = (countries && Array.isArray(countries) && countries.length > 0) 
         ? countries.filter(c => ALL_COUNTRIES.includes(c))
         : ALL_COUNTRIES;

@@ -1159,7 +1159,7 @@
                             
                             <!-- Country Dropdown -->
                             <div class="country-dropdown" style="position:relative;">
-                                <button class="btn btn-secondary" onclick="toggleCountryDropdown(event)" id="btn-countries">🌍 Države (7)</button>
+                                <button class="btn btn-secondary" onclick="toggleCountryDropdown(event)" id="btn-countries">🌍 Države (9)</button>
                                 <div id="country-dropdown-menu" style="display:none; position:absolute; bottom:100%; left:0; margin-bottom:5px; background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; min-width:200px; z-index:100; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);">
                                     <div style="display:flex; flex-direction:column; gap:6px;">
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
@@ -1183,6 +1183,7 @@
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
                                             <input type="checkbox" class="country-check" value="SK" checked style="width:16px; height:16px;"> 🇸🇰 Slovaška
                                         </label>
+<label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check" value="BG" checked style="width:16px; height:16px;"> 🇧🇬 Bolgarija                                        </label>                                        <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check" value="RO" checked style="width:16px; height:16px;"> 🇷🇴 Romunija                                        </label>
                                     </div>
                                     <div style="display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #333;">
                                         <button onclick="selectAllCountries(); event.stopPropagation();" class="btn btn-secondary btn-sm" style="flex:1;">✅ Vse</button>
@@ -1397,7 +1398,7 @@
                         <div style="display:flex; gap:10px; align-items:center;">
                             <!-- Country Dropdown Mode 2 -->
                             <div class="country-dropdown" style="position:relative;">
-                                <button class="btn btn-secondary" onclick="toggleCountryDropdown2(event)" id="btn-countries-2">🌍 Države (7)</button>
+                                <button class="btn btn-secondary" onclick="toggleCountryDropdown2(event)" id="btn-countries-2">🌍 Države (9)</button>
                                 <div id="country-dropdown-menu-2" style="display:none; position:absolute; bottom:100%; left:0; margin-bottom:5px; background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; min-width:200px; z-index:100; box-shadow:0 -4px 20px rgba(0,0,0,0.5);">
                                     <div style="display:flex; flex-direction:column; gap:6px;">
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
@@ -1421,6 +1422,7 @@
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
                                             <input type="checkbox" class="country-check-2" value="SK" checked style="width:16px; height:16px;"> 🇸🇰 SK
                                         </label>
+<label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check-2" value="BG" checked style="width:16px; height:16px;"> 🇧🇬 BG                                        </label>                                        <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check-2" value="RO" checked style="width:16px; height:16px;"> 🇷🇴 RO                                        </label>
                                     </div>
                                     <div style="display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #333;">
                                         <button onclick="selectAllCountries2(); event.stopPropagation();" class="btn btn-secondary btn-sm" style="flex:1;">✅ Vse</button>
@@ -4236,75 +4238,6 @@
             }
         });
         
-        window.saveTextToLibrary = function(index) {
-            const t = detectedTexts[index];
-            if (!t || !t.text || !t.text.trim()) {
-                alert('Tekst je prazen');
-                return;
-            }
-
-            // Show category picker
-            const categories = [
-                { value: 'hook_problem', label: '🪝 Hook / Problem' },
-                { value: 'solution_benefit', label: '✅ Rešitev / Prednost' },
-                { value: 'trust', label: '🛡️ Zaupanje' },
-                { value: 'cta', label: '🎯 CTA' }
-            ];
-
-            const products = [
-                { value: 'tshirt', label: '👕 Majice' },
-                { value: 'boxers', label: '🩲 Bokserice' }
-            ];
-
-            // Create modal
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
-            modal.innerHTML = `
-                <div style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;max-width:400px;width:90%;">
-                    <h3 style="margin:0 0 8px 0;color:#fff;">📚 Dodaj v knjižnico</h3>
-                    <p style="color:rgba(255,255,255,0.5);font-size:13px;margin:0 0 16px 0;">"${t.text}"</p>
-                    <label style="color:rgba(255,255,255,0.7);font-size:13px;display:block;margin-bottom:4px;">Produkt:</label>
-                    <select id="lib-product" style="width:100%;padding:10px;background:#0f0f0f;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:12px;">
-                        ${products.map(p => '<option value="' + p.value + '">' + p.label + '</option>').join('')}
-                    </select>
-                    <label style="color:rgba(255,255,255,0.7);font-size:13px;display:block;margin-bottom:4px;">Kategorija:</label>
-                    <select id="lib-category" style="width:100%;padding:10px;background:#0f0f0f;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:16px;">
-                        ${categories.map(c => '<option value="' + c.value + '">' + c.label + '</option>').join('')}
-                    </select>
-                    <div style="display:flex;gap:10px;justify-content:flex-end;">
-                        <button onclick="this.closest('div[style*=fixed]').remove()" style="padding:10px 20px;background:#333;border:none;border-radius:8px;color:#fff;cursor:pointer;">Prekliči</button>
-                        <button onclick="confirmSaveToLibrary(${index}, this.closest('div[style*=fixed]'))" style="padding:10px 20px;background:#10b981;border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">💾 Shrani</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        };
-
-        window.confirmSaveToLibrary = function(index, modal) {
-            const t = detectedTexts[index];
-            const product = document.getElementById('lib-product').value;
-            const category = document.getElementById('lib-category').value;
-
-            // Save to localStorage (same format as library.html uses)
-            // Add directly to textLibrary (same page, same memory)
-            if (!textLibrary[product]) textLibrary[product] = {};
-            if (!textLibrary[product][category]) textLibrary[product][category] = [];
-            
-            const isDup = textLibrary[product][category].includes(t.text);
-            if (!isDup) {
-                textLibrary[product][category].push(t.text);
-                // Save to localStorage and refresh library UI
-                if (typeof saveUserData === 'function') saveUserData();
-                if (typeof renderLibrary === 'function') renderLibrary();
-                
-                // Visual feedback
-                const btn = document.querySelector(`[onclick="saveTextToLibrary(${index})"]`);
-                if (btn) { btn.textContent = '✅'; setTimeout(() => btn.textContent = '📚', 2000); }
-            }
-
-            modal.remove();
-        };
-
         window.updateDetectedText = function(index, newText) {
             if (detectedTexts[index]) {
                 detectedTexts[index].text = newText;
@@ -4402,9 +4335,41 @@
         };
         
         window.deleteDetectedText = function(index) {
+            if (index > 0 && index < detectedTexts.length) {
+                const deleted = detectedTexts[index];
+                const prev = detectedTexts[index - 1];
+                const next = detectedTexts[index + 1];
+                prev.end = next ? next.start : deleted.end;
+            }
             detectedTexts.splice(index, 1);
             renderDetectedTexts();
             checkReadyMode2();
+        };
+
+        window.editDetectedTime = function(index, field, spanEl) {
+            const t = detectedTexts[index];
+            const current = (field === 'start' ? t.start : t.end).toFixed(1);
+            const input = document.createElement('input');
+            input.type = 'number'; input.step = '0.1'; input.min = '0'; input.value = current;
+            input.style.cssText = 'width: 55px; padding: 2px 4px; background: #0f0f0f; border: 1px solid #10b981; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 600; text-align: center;';
+            const finish = () => {
+                const num = parseFloat(input.value);
+                if (isNaN(num) || num < 0) { renderDetectedTexts(); return; }
+                if (field === 'end') {
+                    t.end = num;
+                    for (let j = index + 1; j < detectedTexts.length; j++) {
+                        if (detectedTexts[j].start < t.end) { detectedTexts[j].start = t.end; if (detectedTexts[j].start >= detectedTexts[j].end) detectedTexts[j].end = detectedTexts[j].start + 0.5; } else break;
+                    }
+                } else {
+                    t.start = num;
+                    if (index > 0 && detectedTexts[index-1].end > t.start) detectedTexts[index-1].end = t.start;
+                }
+                detectedTexts.sort((a, b) => a.start - b.start);
+                renderDetectedTexts(); checkReadyMode2();
+            };
+            input.addEventListener('blur', finish);
+            input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') renderDetectedTexts(); });
+            spanEl.replaceWith(input); input.focus(); input.select();
         };
         
         function renderDetectedTexts() {
@@ -4455,8 +4420,8 @@
                 </div>
                 ${detectedTexts.map((t, i) => `
                     <div class="detected-text-item" style="display: flex; gap: 10px; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-                        <span style="background: ${((t.end || 0) - (t.start || 0)) < 0.8 ? '#ef4444' : '#10b981'}; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; white-space: nowrap;">
-                            ${(t.start || 0).toFixed(1)}s - ${(t.end || 0).toFixed(1)}s
+                        <span style="display: inline-flex; gap: 2px; white-space: nowrap;">
+                            <span onclick="editDetectedTime(${i}, 'start', this)" style="background: #10b981; padding: 4px 8px; border-radius: 4px 0 0 4px; font-size: 11px; font-weight: 600; cursor: pointer;" title="Uredi začetek">${(t.start || 0).toFixed(1)}s</span><span style="background: #0d9668; padding: 4px 2px; font-size: 11px; color: #fff;">-</span><span onclick="editDetectedTime(${i}, 'end', this)" style="background: #10b981; padding: 4px 8px; border-radius: 0 4px 4px 0; font-size: 11px; font-weight: 600; cursor: pointer;" title="Uredi konec">${(t.end || 0).toFixed(1)}s</span>
                         </span>
                         <span style="background: #3b82f6; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; white-space: nowrap; color: #fff;" title="Pozicija (x%, y%)">
                             📍 ${Math.round(t.x || 50)}%, ${Math.round(t.y || 50)}%
@@ -4469,9 +4434,6 @@
                             style="padding: 6px 8px; background: #0f0f0f; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 12px;">
                             ${styleOptions.replace(`value="${t.style || 'white'}"`, `value="${t.style || 'white'}" selected`)}
                         </select>
-                        <button onclick="saveTextToLibrary(${i})" 
-                            style="background: none; border: none; color: #10b981; cursor: pointer; padding: 5px; font-size: 16px;" 
-                            title="Dodaj v knjižnico">📚</button>
                         <button onclick="deleteDetectedText(${i})" 
                             style="background: none; border: none; color: #f87171; cursor: pointer; padding: 5px; font-size: 16px;" 
                             title="Izbriši">🗑️</button>
