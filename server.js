@@ -20,18 +20,13 @@ const upload = multer({
     storage,
     limits: { fileSize: 500 * 1024 * 1024 }, // 500MB
     fileFilter: (req, file, cb) => {
-        const ext = (file.originalname || '').toLowerCase();
-        const videoExts = ['.mp4','.mov','.avi','.mkv','.webm','.m4v','.wmv','.flv'];
-        if (file.mimetype.startsWith('video/') || videoExts.some(e => ext.endsWith(e))) {
-            cb(null, true);
-        } else {
-            cb(null, false);
-        }
+        if (file.mimetype.startsWith('video/')) cb(null, true);
+        else cb(new Error('Only video files allowed'));
     }
 });
 
 const app = express();
-const PORT = 3006;
+const PORT = process.env.PORT || 3006;
 const DATA_FILE = path.join(__dirname, 'data.json');
 const QUEUE_FILE = path.join(__dirname, 'queue.json');
 
@@ -912,7 +907,9 @@ app.post('/api/translate-texts', async (req, res) => {
         'GR': 'Greek',
         'IT': 'Italian',
         'HU': 'Hungarian',
-        'SK': 'Slovak', 'BG': 'Bulgarian', 'RO': 'Romanian'
+        'SK': 'Slovak',
+        'BG': 'Bulgarian',
+        'RO': 'Romanian'
     };
     
     try {
@@ -931,7 +928,7 @@ app.post('/api/translate-texts', async (req, res) => {
                 model: 'gpt-4o',
                 messages: [{
                     role: 'system',
-                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. Maintain any emojis. Return ONLY valid JSON. CRITICAL: Each text is DIFFERENT and must get a UNIQUE translation. Never give the same translation for two different source texts.`
+                    content: `You are a professional marketing translator. Translate the given texts into the requested languages. Keep the tone punchy and marketing-appropriate. Maintain any emojis. Return ONLY valid JSON.`
                 }, {
                     role: 'user',
                     content: `Translate these marketing texts into ${languages.map(l => LANG_NAMES[l]).join(', ')}:
@@ -1525,7 +1522,6 @@ If no added text overlay visible, return: {"texts": []}` },
                 });
                 
                 const data = await response.json();
-                console.error(`[${jobId}] FULL API RESP frame ${i}:`, JSON.stringify(data).substring(0, 600));
                 const content = data.choices?.[0]?.message?.content || '{}';
                 
                 // DEBUG: Log raw response for first 3 frames and any frames with text
@@ -1678,7 +1674,7 @@ If no added text overlay visible, return: {"texts": []}` },
                             end: timestamp + frameInterval,
                             description: parsed.description || `Scene ${segments.length + 1}`,
                             emotion: parsed.emotion || 'neutral',
-                            thumbnail: `/uploads/analysis/${jobId}/${frames[i]}`
+                            thumbnail: `/launches/uploads/analysis/${jobId}/${frames[i]}`
                         });
                         
                         lastDescription = parsed.description || '';
@@ -2021,7 +2017,7 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
         
         // Step 1: Measure text with word wrap using caption: (auto-wraps to fit width)
         // First measure single line to check if wrapping needed
-        const measureCmd = `convert -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -gravity center label:"${text}" -format "%wx%h" info:`;
+        const measureCmd = `convert -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -gravity center label:"${text}" -format "%wx%h" info:`;
         let singleW = 9999, singleH = scaledFontSize;
         try {
             const { stdout } = await execPromise(measureCmd);
@@ -2036,7 +2032,7 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
         if (useCaption) {
             // Text too wide - use caption: with fixed width for word wrapping
             const captionW = maxTextWidth;
-            const measureWrapCmd = `convert -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -size ${captionW}x -gravity center caption:"${text}" -format "%wx%h" info:`;
+            const measureWrapCmd = `convert -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -size ${captionW}x -gravity center caption:"${text}" -format "%wx%h" info:`;
             try {
                 const { stdout } = await execPromise(measureWrapCmd);
                 const parts = stdout.trim().split('x');
@@ -2063,8 +2059,8 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
             : `-gravity center -annotate +0+0 "${text}"`;
         
         const cmd = useCaption
-            ? `convert \\( -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} \\) \\( -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -fill "${cfg.text}" -background none -size ${imgW - paddingX * 2}x -gravity center caption:"${text}" \\) -gravity center -composite PNG32:"${pngPath}"`
-            : `convert -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} -stroke none -fill "${cfg.text}" -font "/usr/share/fonts/google-noto/NotoSans-Black.ttf" -pointsize ${scaledFontSize} -gravity center -annotate +0+0 "${text}" PNG32:"${pngPath}"`;
+            ? `convert \\( -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} \\) \\( -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -fill "${cfg.text}" -background none -size ${imgW - paddingX * 2}x -gravity center caption:"${text}" \\) -gravity center -composite PNG32:"${pngPath}"`
+            : `convert -size ${imgW}x${imgH} xc:"rgba(0,0,0,0)" ${drawBg} -stroke none -fill "${cfg.text}" -font "/usr/share/fonts/google-noto-vf/NotoSans[wght].ttf" -weight 700 -pointsize ${scaledFontSize} -gravity center -annotate +0+0 "${text}" PNG32:"${pngPath}"`;
         await execPromise(cmd);
         
         // Calculate position (centered horizontally)
@@ -2084,38 +2080,38 @@ async function generateTextOverlayPngs(texts, fontSize, outputDir, videoWidth = 
 // BorderStyle=3 = opaque box, OutlineColour = box color, BackColour = box shadow
 const assStyles = {
     // White box, black text (classic) - BorderStyle=3 for opaque box
-    white: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    white: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Black box, white text  
-    black: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    black: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // No box, just shadow
-    shadow: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,0,5,5,50,50,200,1',
+    shadow: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,0,5,5,50,50,200,1',
     // Smaller padding (looks rounder)
-    rounded: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    rounded: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H00FFFFFF,&H00FFFFFF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Green box (NORIKS brand)
-    gradient: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    gradient: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // White outline, no fill
-    outline: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,0,5,50,50,200,1',
+    outline: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,0,5,50,50,200,1',
     // === EXPLOSIVE STYLES FOR HOOK/CTA ===
     // Red box (#ef4444 = BGR: 4444EF)
-    red: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H004444EF,&H004444EF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    red: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H004444EF,&H004444EF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Orange box (#f97316 = BGR: 1673F9)
-    orange: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H001673F9,&H001673F9,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    orange: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H001673F9,&H001673F9,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Yellow box (#eab308 = BGR: 08B3EA)
-    yellow: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H0008B3EA,&H0008B3EA,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    yellow: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H0008B3EA,&H0008B3EA,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Fire - red/orange gradient effect (using red as base)
-    fire: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H000066FF,&H000066FF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    fire: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H000066FF,&H000066FF,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Neon cyan on black (#0ff = BGR: FFFF00)
-    neon: 'Style: Default,Noto Sans Black,72,&H00FFFF00,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    neon: 'Style: Default,Noto Sans,72,&H00FFFF00,&H000000FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Explosive - purple/red (#dc2626 = BGR: 2626DC, #7c3aed)
-    explosive: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H00ED3A7C,&H00ED3A7C,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    explosive: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H00ED3A7C,&H00ED3A7C,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Green box (#22c55e = BGR: 5EC522)
-    green: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H005EC522,&H005EC522,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    green: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H005EC522,&H005EC522,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Pulse - green gradient
-    pulse: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    pulse: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H0081B910,&H0081B910,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Urgent - red with gold border (#dc2626 red, #fbbf24 gold)
-    urgent: 'Style: Default,Noto Sans Black,72,&H00FFFFFF,&H000000FF,&H002626DC,&H002626DC,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
+    urgent: 'Style: Default,Noto Sans,72,&H00FFFFFF,&H000000FF,&H002626DC,&H002626DC,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1',
     // Gold (#fbbf24 = BGR: 24BFFB)
-    gold: 'Style: Default,Noto Sans Black,72,&H00000000,&H000000FF,&H0024BFFB,&H0024BFFB,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1'
+    gold: 'Style: Default,Noto Sans,72,&H00000000,&H000000FF,&H0024BFFB,&H0024BFFB,1,0,0,0,100,100,0,0,3,18,0,5,50,50,200,1'
 };
 
 // Generate Slovenian preview video
@@ -2139,7 +2135,7 @@ app.post('/api/localizer/preview', async (req, res) => {
         console.log('[Preview] Per-text styles:', texts.map((t, i) => `[${i}] "${t.text?.substring(0,20)}" style=${t.style}`).join(', '));
         
         const baseStyle = assStyles[style] || assStyles.white;
-        const defaultStyle = baseStyle.replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`);
+        const defaultStyle = baseStyle.replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`);
         
         // Create per-text styles
         const perTextStyleLines = [];
@@ -2149,18 +2145,18 @@ app.post('/api/localizer/preview', async (req, res) => {
             if (s !== style && !usedStyles.has(s)) {
                 usedStyles.add(s);
                 const base = assStyles[s] || assStyles.white;
-                perTextStyleLines.push(base.replace('Style: Default,', `Style: S_${s},`).replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
+                perTextStyleLines.push(base.replace('Style: Default,', `Style: S_${s},`).replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
             }
         });
         
         // Hook/CTA styles
         if (hookStyle && !usedStyles.has(hookStyle)) {
             const base = assStyles[hookStyle] || assStyles.white;
-            perTextStyleLines.push(base.replace('Style: Default,', 'Style: Hook,').replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
+            perTextStyleLines.push(base.replace('Style: Default,', 'Style: Hook,').replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
         }
         if (ctaStyle && !usedStyles.has(ctaStyle)) {
             const base = assStyles[ctaStyle] || assStyles.white;
-            perTextStyleLines.push(base.replace('Style: Default,', 'Style: CTA,').replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${fontSize},`));
+            perTextStyleLines.push(base.replace('Style: Default,', 'Style: CTA,').replace(/,Noto Sans,\d+,/, `,Noto Sans,${fontSize},`));
         }
         
         let ass = `[Script Info]
@@ -2231,7 +2227,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         
         res.json({ 
             success: true, 
-            videoUrl: `/uploads/previews/${jobId}/${name}-preview.mp4` 
+            videoUrl: `/launches/uploads/previews/${jobId}/${name}-preview.mp4` 
         });
         
     } catch (e) {
@@ -2243,12 +2239,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 // Generate all 7 country videos
 app.post('/api/localizer/generate', async (req, res) => {
     console.log('Generate request:', JSON.stringify(req.body, null, 2));
-    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase } = req.body;
-    if (!videoClean || !texts?.length) {
+    const { videoClean, name, texts, style, fontSize = 72, namingParts, hookStyle, ctaStyle, perTextStyles, countries, source, uppercase, mode, voiceoverScript, videoDuration } = req.body;
+    if (!videoClean || (!texts?.length && !voiceoverScript?.length)) {
         console.log('Generate 400: videoClean=', videoClean, 'texts=', texts);
         return res.status(400).json({ error: 'Missing data: videoClean=' + !!videoClean + ' texts=' + (texts?.length || 0) });
+        return res.status(400).json({ error: 'Missing data: videoClean=' + !!videoClean + ' texts=' + (texts?.length || 0) });
     }
-    // Debug: log per-text styles
     if (perTextStyles) {
         console.log('[Generate] Per-text styles:', texts.map(t => `"${t.text?.substring(0,20)}" → style:${t.style}`).join(', '));
     }
@@ -2262,6 +2258,15 @@ app.post('/api/localizer/generate', async (req, res) => {
         ? countries.filter(c => ALL_COUNTRIES.includes(c))
         : ALL_COUNTRIES;
     
+    // Get video duration for voiceover mode
+    let actualVideoDuration = videoDuration;
+    if (mode === 'voiceover' && !actualVideoDuration) {
+        try {
+            const durResult = await execPromise(`${FFMPEG} -i "${videoPath}" 2>&1 | grep Duration | awk '{print $2}' | tr -d ','`);
+            const parts = durResult.stdout.trim().split(':');
+            actualVideoDuration = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+        } catch(e) { actualVideoDuration = 30; }
+    }
     const jobId = `gen-${Date.now()}`;
     const job = {
         id: jobId,
@@ -2276,7 +2281,10 @@ app.post('/api/localizer/generate', async (req, res) => {
         perTextStyles: perTextStyles || false, // Enable per-text style overrides
         uppercase: uppercase || false, // All caps mode
         countries: selectedCountries, // Selected countries to generate
-        source: source || 'library', // 'library' or 'localize'
+        source: source || 'library',
+        mode: mode || 'subtitles',
+        voiceoverScript: voiceoverScript || null,
+        videoDuration: actualVideoDuration || videoDuration || null,
         status: 'translating',
         completed: 0,
         currentLang: '',
@@ -2288,7 +2296,8 @@ app.post('/api/localizer/generate', async (req, res) => {
     persistJobs();
     
     // Start async generation
-    generateAllCountries(job, videoPath).catch(e => {
+    const generator = (mode === 'voiceover') ? generateVoiceoverCountries : generateAllCountries;
+    generator(job, videoPath).catch(e => {
         job.status = 'error';
         job.error = e.message;
         persistJobs();
@@ -2440,9 +2449,7 @@ CRITICAL RULES:
 6. Adapt idioms/expressions to what natives would say
 7. Target: men buying for themselves OR women buying gifts for partners
 
-Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.
-
-CRITICAL: You will receive multiple texts. Each text is DIFFERENT and must receive a DIFFERENT, UNIQUE translation. Never translate two different source texts to the same target text. If texts seem similar (e.g. "TE REŽEJO?" vs "TE DRGNEJO?"), they have DIFFERENT meanings - translate each one accurately and distinctly.`
+Product: NORIKS premium men's clothing (t-shirts, boxers) - emphasize comfort, quality, fit.`
             }, {
                 role: 'user',
                 content: `Translate these Slovenian marketing texts. Make them sound like a NATIVE SPEAKER wrote them:
@@ -2509,7 +2516,7 @@ Return ONLY valid JSON array:
         
         // Get styles with custom font size
         const baseStyle = assStyles[job.style] || assStyles.white;
-        const defaultStyle = baseStyle.replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
+        const defaultStyle = baseStyle.replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
         
         // Create Hook and CTA styles if specified
         let hookStyleLine = '';
@@ -2519,14 +2526,14 @@ Return ONLY valid JSON array:
             const hookBase = assStyles[job.hookStyle] || assStyles.white;
             hookStyleLine = hookBase
                 .replace('Style: Default,', 'Style: Hook,')
-                .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
+                .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
         }
         
         if (job.ctaStyle) {
             const ctaBase = assStyles[job.ctaStyle] || assStyles.white;
             ctaStyleLine = ctaBase
                 .replace('Style: Default,', 'Style: CTA,')
-                .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
+                .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
         }
         
         // Build styles - if perTextStyles, create style for each unique style used
@@ -2544,7 +2551,7 @@ Return ONLY valid JSON array:
                 const styleBase = assStyles[styleName] || assStyles.white;
                 const styleFormatted = styleBase
                     .replace('Style: Default,', `Style: ${styleName},`)
-                    .replace(/,Noto Sans Black,\d+,/, `,Noto Sans Black,${job.fontSize || 72},`);
+                    .replace(/,Noto Sans,\d+,/, `,Noto Sans,${job.fontSize || 72},`);
                 additionalStyles += styleFormatted + '\n';
             });
         }
@@ -2572,7 +2579,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         job.texts.forEach((t, i) => {
             const translatedText = translations[i]?.[lang];
             let text = translatedText || t.text;
-            if (!text || !text.trim()) return; // Skip empty texts
             if (job.uppercase) text = text.toUpperCase();
             
             if (i === 0) {
@@ -2600,7 +2606,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             }
             
             const pixelX = 540;
-            const pixelY = 900; // Always center position
+            const pixelY = (t.y !== undefined) ? Math.round((t.y / 100) * 1920) : 900;
             const posOverride = `\\an5\\pos(${pixelX},${pixelY})`;
             
             ass += `Dialogue: 0,${start},${end},${styleName},,0,0,0,,{${posOverride}\\fad(200,200)}${text}\n`;
@@ -2674,7 +2680,520 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     // TODO: Send Telegram notification
 }
 
+
+// === VOICEOVER: ElevenLabs TTS + Subtitle generation ===
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
+
+// Voice IDs for each language - natural male voices
+const VOICE_MAP = {
+    HR: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },  // Male
+    CZ: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    PL: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    GR: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    IT: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    HU: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    SK: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    BG: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' },
+    RO: { voice_id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel' }
+};
+
+// Language codes for ElevenLabs
+const ELEVEN_LANG_CODES = {
+    HR: 'hr', CZ: 'cs', PL: 'pl', GR: 'el', IT: 'it', HU: 'hu', SK: 'sk', BG: 'bg', RO: 'ro'
+};
+
+// Generate TTS audio with ElevenLabs
+async function generateTTS(text, langCode, outputPath) {
+    const voiceConfig = VOICE_MAP[langCode] || VOICE_MAP.HR;
+    const elevenLang = ELEVEN_LANG_CODES[langCode] || 'en';
+    
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voice_id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'xi-api-key': ELEVENLABS_API_KEY
+        },
+        body: JSON.stringify({
+            text: text,
+            model_id: 'eleven_multilingual_v2',
+            language_code: elevenLang,
+            voice_settings: {
+                stability: 0.5,
+                similarity_boost: 0.75,
+                style: 0.3,
+                use_speaker_boost: true
+            }
+        })
+    });
+    
+    if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`ElevenLabs TTS error: ${response.status} - ${err}`);
+    }
+    
+    const buffer = Buffer.from(await response.arrayBuffer());
+    fs.writeFileSync(outputPath, buffer);
+    
+    // Get duration of generated audio
+    try {
+        const durResult = await execPromise(`${FFMPEG} -i "${outputPath}" 2>&1 | grep Duration | awk '{print $2}' | tr -d ','`);
+        const parts = durResult.stdout.trim().split(':');
+        const duration = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+        return { path: outputPath, duration };
+    } catch (e) {
+        return { path: outputPath, duration: 3 }; // fallback 3s
+    }
+}
+
+// API: Convert library texts to voiceover script
+app.post('/api/localizer/voiceover-script', async (req, res) => {
+    const { texts, videoDuration } = req.body;
+    if (!texts?.length || !videoDuration) {
+        return res.status(400).json({ error: 'Missing texts or videoDuration' });
+    }
+    
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [{
+                    role: 'system',
+                    content: `Pišeš podnapise v PRAVILNI SLOVENŠČINI za NORIKS reklamo. NORIKS prodaja premium moške majice in boksarice.
+
+VSAK stavek mora biti POPOLN — z jasnim subjektom in pomenom. Bralec mora razumeti stavek BREZ konteksta.
+Stavki morajo biti med seboj POVEZANI — vsak naslednji stavek logično sledi prejšnjemu. Skupaj tvorijo eno tekoče besedilo.
+
+STRUKTURA zgodbe:
+1. PROBLEM — opiši težavo ki jo kupec pozna (1-2 stavka)
+2. REŠITEV — predstavi NORIKS kot rešitev (2-3 stavki)
+3. KORISTI — konkretne prednosti produkta (2-3 stavki)  
+4. CTA — poziv k akciji (1 stavek)
+
+Vsak prehod med stavki mora biti naraven — kot da govoriš eno zgodbo, ne berieš seznama.
+
+Primer DOBRE zgodbe:
+"Poznate občutek ko vas boksarice režejo? NORIKS boksarice so narejene iz premium bombaža. Material se prilagodi telesu in ne stiska. Po pranju ohranjajo obliko kot nove. Na voljo v velikostih do 4XL. Danes jih dobiš s 20% popustom."
+
+Video traja TOČNO ${videoDuration} sekund. Zadnji stavek PRED ${videoDuration}s.`
+                }, {
+                    role: 'user',
+                    content: `Iz teh točk napiši POVEZANO ZGODBO za podnapise:
+
+${texts.map((t, i) => `${i+1}. "${t.text}"`).join('\n')}
+
+Video: ${videoDuration}s. NE preseči!
+
+JSON: [{"text": "stavek", "start": 0, "end": 2.5}, ...]
+
+- Max 6 besed na stavek (NIKOLI 3 vrstice!)
+- Stavki se LOGIČNO povezujejo
+- VSAK stavek ima subjekt in pomen
+- Ne uporabi vseh točk če ne gre v čas
+- 0.3-0.5s premor med stavki
+- SAMO JSON`
+                }],
+                max_tokens: 2000
+            })
+        });
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || '[]';
+        const match = content.match(/\[[\s\S]*\]/);
+        const script = match ? JSON.parse(match[0]) : [];
+        
+        res.json({ script, videoDuration });
+    } catch (e) {
+        console.error('Voiceover script error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Generate voiceover video for all countries
+async function generateVoiceoverCountries(job, videoPath) {
+    const LANGUAGES = job.countries || ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const LANG_NAMES = {
+        HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian',
+        GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak'
+    };
+    
+    const outputDir = path.join(__dirname, 'uploads', 'generated', job.id);
+    fs.mkdirSync(outputDir, { recursive: true });
+    
+    // Step 1: Translate voiceover script
+    console.log(`[${job.id}] [VO] Translating voiceover script to ${LANGUAGES.length} languages...`);
+    
+    const langList = LANGUAGES.map(l => LANG_NAMES[l]).join(', ');
+    const jsonFormat = LANGUAGES.map(l => `"${l}":"..."`).join(',');
+    const textsToTranslate = job.voiceoverScript.map(s => s.text);
+    
+    const transResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{
+                role: 'system',
+                content: `You are a professional marketing translator with NATIVE-SPEAKER fluency in ${langList}.
+
+CRITICAL RULES:
+1. These are VOICE-OVER scripts - they must sound NATURAL when spoken aloud
+2. Use conversational, everyday language
+3. Keep the same casual, friendly tone as the original
+4. Sentences should be SHORT and easy to speak (2-4 seconds each)
+5. Brand name "NORIKS" stays unchanged
+6. Think: how would a local friend recommend this product?`
+            }, {
+                role: 'user',
+                content: `Translate these Slovenian voice-over sentences. They will be READ ALOUD, so make them sound natural:
+
+${textsToTranslate.map((t, i) => `${i+1}. "${t}"`).join('\n')}
+
+Return ONLY valid JSON array:
+[{${jsonFormat}}, ...]`
+            }],
+            max_tokens: 2000
+        })
+    });
+    
+    const transData = await transResponse.json();
+    const transContent = transData.choices?.[0]?.message?.content || '[]';
+    const transMatch = transContent.match(/\[[\s\S]*\]/);
+    let translations = [];
+    try {
+        translations = transMatch ? JSON.parse(transMatch[0]) : [];
+    } catch (e) {
+        console.error(`[${job.id}] [VO] Failed to parse translations:`, e.message);
+    }
+    
+    console.log(`[${job.id}] [VO] Parsed ${translations.length} translations`);
+    
+    if (job.cancelled) {
+        job.status = 'cancelled';
+        persistJobs();
+        return;
+    }
+    
+    job.status = 'generating';
+    
+    // Step 2: For each language - generate TTS + subtitles + combine
+    for (let langIdx = 0; langIdx < LANGUAGES.length; langIdx++) {
+        if (job.cancelled) {
+            job.status = 'cancelled';
+            persistJobs();
+            return;
+        }
+        
+        const lang = LANGUAGES[langIdx];
+        job.currentLang = lang;
+        console.log(`[${job.id}] [VO] Generating ${lang}...`);
+        
+        // Get translated texts for this language
+        const langTexts = job.voiceoverScript.map((s, i) => {
+            const translated = translations[i]?.[lang] || s.text;
+            return { ...s, translatedText: translated };
+        });
+        
+        // Generate TTS for each sentence
+        const ttsDir = path.join(outputDir, `tts-${lang}`);
+        fs.mkdirSync(ttsDir, { recursive: true });
+        
+        const ttsSegments = [];
+        for (let i = 0; i < langTexts.length; i++) {
+            const segment = langTexts[i];
+            const ttsPath = path.join(ttsDir, `segment-${i}.mp3`);
+            
+            try {
+                console.log(`[${job.id}] [VO] TTS ${lang} segment ${i}: "${segment.translatedText.substring(0, 40)}..."`);
+                const ttsResult = await generateTTS(segment.translatedText, lang, ttsPath);
+                ttsSegments.push({
+                    text: segment.translatedText,
+                    audioPath: ttsResult.path,
+                    audioDuration: ttsResult.duration,
+                    start: segment.start,
+                    end: segment.end
+                });
+            } catch (e) {
+                console.error(`[${job.id}] [VO] TTS error for ${lang} segment ${i}:`, e.message);
+                // Skip this segment if TTS fails
+                ttsSegments.push({
+                    text: segment.translatedText,
+                    audioPath: null,
+                    audioDuration: segment.end - segment.start,
+                    start: segment.start,
+                    end: segment.end
+                });
+            }
+        }
+        
+        // Create concat file for TTS audio with silence gaps
+        const concatPath = path.join(ttsDir, 'concat.txt');
+        const silencePath = path.join(ttsDir, 'silence.mp3');
+        
+        // Generate a short silence file
+        await execPromise(`${FFMPEG} -y -f lavfi -i anullsrc=r=44100:cl=mono -t 0.3 -q:a 9 "${silencePath}" 2>/dev/null`);
+        
+        // Build full audio: place each TTS segment at its start time
+        // Use amerge approach: create a full-length silent track, then overlay each segment
+        const videoDuration = job.videoDuration || 30;
+        const fullSilencePath = path.join(ttsDir, 'full-silence.mp3');
+        await execPromise(`${FFMPEG} -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${videoDuration} -q:a 9 "${fullSilencePath}" 2>/dev/null`);
+        
+        // Build filter complex to overlay each TTS segment at its timestamp
+        let filterParts = [];
+        let inputs = [`-i "${fullSilencePath}"`];
+        const validSegments = ttsSegments.filter(s => s.audioPath && fs.existsSync(s.audioPath));
+        
+        validSegments.forEach((seg, idx) => {
+            inputs.push(`-i "${seg.audioPath}"`);
+        });
+        
+        const combinedAudioPath = path.join(ttsDir, 'combined.mp3');
+        
+        if (validSegments.length > 0) {
+            let fc = '';
+            validSegments.forEach((seg, idx) => {
+                fc += `[${idx + 1}:a]adelay=${Math.round(seg.start * 1000)}|${Math.round(seg.start * 1000)}[d${idx}];`;
+            });
+            fc += `[0:a]`;
+            validSegments.forEach((_, idx) => {
+                fc += `[d${idx}]`;
+            });
+            fc += `amix=inputs=${validSegments.length + 1}:duration=first:dropout_transition=0[aout]`;
+            
+            await execPromise(`${FFMPEG} -y ${inputs.join(' ')} -filter_complex "${fc}" -map "[aout]" -t ${videoDuration} "${combinedAudioPath}" 2>/dev/null`);
+        } else {
+            // No valid TTS - use silence
+            fs.copyFileSync(fullSilencePath, combinedAudioPath);
+        }
+        
+        // Create ASS subtitles (bottom-center, subtitle style)
+        const subsStyle = `Style: Default,Noto Sans,${job.fontSize || 90},&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,3,1,5,30,30,200,1`;
+        
+        let ass = `[Script Info]
+Title: ${job.name} ${lang} VO
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+${subsStyle}
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+`;
+        
+        ttsSegments.forEach(seg => {
+            const start = formatAssTime(seg.start);
+            const end = formatAssTime(Math.min(seg.start + seg.audioDuration, seg.end + 0.5));
+            ass += `Dialogue: 0,${start},${end},Default,,0,0,0,,{\\fad(200,200)}${seg.text}\n`;
+        });
+        
+        const assPath = path.join(outputDir, `vo-subs-${lang}.ass`);
+        fs.writeFileSync(assPath, ass);
+        
+        // Final: combine video + TTS audio + subtitles
+        let videoName;
+        if (job.namingParts) {
+            const { id, date, product, type, author } = job.namingParts;
+            videoName = `${id}_${date}_${lang}_${product}_${type}_${author}`;
+        } else {
+            videoName = `${job.name}-${lang}`;
+        }
+        const outVideo = path.join(outputDir, `${videoName}.mp4`);
+        
+        // Mix original audio (if exists) with voiceover, or just use voiceover
+        // Lower original audio volume, add voiceover on top
+        try {
+            // Check if video has audio
+            const probeResult = await execPromise(`${FFMPEG} -i "${videoPath}" 2>&1 | grep "Audio:"`);
+            const hasAudio = probeResult.stdout.trim().length > 0;
+            
+            if (hasAudio) {
+                // Mix: original at 30% volume + voiceover at 100%
+                await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudioPath}" -filter_complex "[0:a]volume=0.3[orig];[1:a]volume=1.0[vo];[orig][vo]amix=inputs=2:duration=first[aout];[0:v]ass='${assPath}':fontsdir=/usr/share/fonts[vout]" -map "[vout]" -map "[aout]" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -t ${videoDuration} "${outVideo}" 2>&1`);
+            } else {
+                // No original audio - just voiceover
+                await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudioPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -map 0:v -map 1:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest "${outVideo}" 2>&1`);
+            }
+        } catch (e) {
+            // Fallback: no audio mix, just subtitles
+            console.error(`[${job.id}] [VO] Audio mix error for ${lang}:`, e.message);
+            await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudioPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -map 0:v -map 1:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest "${outVideo}" 2>&1`);
+        }
+        
+        job.outputs[lang] = outVideo;
+        job.completed = langIdx + 1;
+        persistJobs();
+        
+        console.log(`[${job.id}] [VO] ${lang} done (${job.completed}/${LANGUAGES.length})`);
+    }
+    
+    job.status = 'done';
+    job.currentLang = '';
+    job.completedAt = new Date().toISOString();
+    persistJobs();
+    console.log(`[${job.id}] [VO] All done!`);
+}
+// === END VOICEOVER ===
 // List all jobs
+
+// Get video duration
+
+
+// Voice-over SLO preview - generate video with Slovenian subtitles + TTS
+app.post('/api/localizer/vo-preview', async (req, res) => {
+    const { videoClean, script, videoDuration } = req.body;
+    if (!videoClean || !script?.length) {
+        return res.status(400).json({ error: 'Missing videoClean or script' });
+    }
+    
+    const videoPath = path.join(__dirname, 'uploads', videoClean);
+    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video not found' });
+    
+    const previewDir = path.join(__dirname, 'uploads', 'vo-previews');
+    fs.mkdirSync(previewDir, { recursive: true });
+    
+    const previewId = 'vo-preview-' + Date.now();
+    const ttsDir = path.join(previewDir, previewId + '-tts');
+    fs.mkdirSync(ttsDir, { recursive: true });
+    
+    // Create ASS subtitle file
+    const subsStyle = "Style: Default,Noto Sans,90,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,3,1,5,30,30,200,1";
+    
+    let ass = `[Script Info]
+Title: VO Preview SLO
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1080
+PlayResY: 1920
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+${subsStyle}
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+`;
+    
+    script.forEach(seg => {
+        const start = formatAssTime(seg.start);
+        const end = formatAssTime(seg.end);
+        ass += `Dialogue: 0,${start},${end},Default,,0,0,0,,{\\fad(200,200)}${seg.text}\n`;
+    });
+    
+    const assPath = path.join(previewDir, `${previewId}.ass`);
+    fs.writeFileSync(assPath, ass);
+    
+    const outPath = path.join(previewDir, `${previewId}.mp4`);
+    
+    try {
+        // Generate TTS for each segment in Slovenian
+        console.log(`[vo-preview] Generating SLO TTS for ${script.length} segments...`);
+        const validSegments = [];
+        
+        for (let i = 0; i < script.length; i++) {
+            const seg = script[i];
+            const ttsPath = path.join(ttsDir, `seg-${i}.mp3`);
+            try {
+                await generateTTS(seg.text, 'HR', ttsPath); // HR uses same voice, SLO text
+                if (fs.existsSync(ttsPath)) {
+                    validSegments.push({ path: ttsPath, start: seg.start });
+                }
+            } catch (e) {
+                console.error(`[vo-preview] TTS error segment ${i}:`, e.message);
+            }
+        }
+        
+        const vDuration = videoDuration || 30;
+        
+        if (validSegments.length > 0) {
+            // Create silent base audio
+            const silencePath = path.join(ttsDir, 'silence.mp3');
+            await execPromise(`${FFMPEG} -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${vDuration} -q:a 9 "${silencePath}" 2>/dev/null`);
+            
+            // Build filter to overlay TTS at timestamps
+            let inputs = [`-i "${silencePath}"`];
+            validSegments.forEach(seg => { inputs.push(`-i "${seg.path}"`); });
+            
+            let fc = '';
+            validSegments.forEach((seg, idx) => {
+                fc += `[${idx + 1}:a]adelay=${Math.round(seg.start * 1000)}|${Math.round(seg.start * 1000)}[d${idx}];`;
+            });
+            fc += '[0:a]';
+            validSegments.forEach((_, idx) => { fc += `[d${idx}]`; });
+            fc += `amix=inputs=${validSegments.length + 1}:duration=first:dropout_transition=0[voaudio]`;
+            
+            const combinedAudio = path.join(ttsDir, 'combined.mp3');
+            await execPromise(`${FFMPEG} -y ${inputs.join(' ')} -filter_complex "${fc}" -map "[voaudio]" -t ${vDuration} "${combinedAudio}" 2>/dev/null`);
+            
+            // Combine: video + subtitles + lowered original audio + voiceover
+            try {
+                const probeResult = await execPromise(`${FFMPEG} -i "${videoPath}" 2>&1 | grep "Audio:"`);
+                const hasAudio = probeResult.stdout.trim().length > 0;
+                
+                if (hasAudio) {
+                    await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudio}" -filter_complex "[0:a]volume=0.15[orig];[1:a]volume=1.0[vo];[orig][vo]amix=inputs=2:duration=first[aout];[0:v]ass='${assPath}':fontsdir=/usr/share/fonts[vout]" -map "[vout]" -map "[aout]" -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -t ${vDuration} "${outPath}" 2>&1`);
+                } else {
+                    await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudio}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -map 0:v -map 1:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest "${outPath}" 2>&1`);
+                }
+            } catch (e) {
+                // Fallback: just subtitles + voiceover, no original audio mix
+                await execPromise(`${FFMPEG} -y -i "${videoPath}" -i "${combinedAudio}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -map 0:v -map 1:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest "${outPath}" 2>&1`);
+            }
+        } else {
+            // No TTS succeeded - just subtitles
+            await execPromise(`${FFMPEG} -y -i "${videoPath}" -vf "ass='${assPath}':fontsdir=/usr/share/fonts" -c:v libx264 -preset fast -crf 23 -c:a copy "${outPath}" 2>/dev/null`);
+        }
+        
+        console.log(`[vo-preview] Done: ${outPath}`);
+        res.json({ previewUrl: '/uploads/vo-previews/' + previewId + '.mp4' });
+    } catch (e) {
+        console.error('VO Preview error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+
+// Upload SRT and burn onto video
+app.post('/api/localizer/burn-srt', upload.single('srt'), async (req, res) => {
+    const { videoClean } = req.body;
+    const srtFile = req.file;
+    if (!videoClean || !srtFile) return res.status(400).json({ error: 'Missing video or SRT' });
+    
+    const videoPath = path.join(__dirname, 'uploads', videoClean);
+    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video not found' });
+    
+    const outDir = path.join(__dirname, 'uploads', 'vo-previews');
+    fs.mkdirSync(outDir, { recursive: true });
+    const outId = 'srt-burn-' + Date.now();
+    const outPath = path.join(outDir, outId + '.mp4');
+    
+    try {
+        await execPromise(`${FFMPEG} -y -i "${videoPath}" -vf "subtitles='${srtFile.path}'" -c:v libx264 -preset fast -crf 23 -c:a copy "${outPath}" 2>&1`);
+        res.json({ previewUrl: '/uploads/vo-previews/' + outId + '.mp4' });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/localizer/video-duration', async (req, res) => {
+    const file = req.query.file;
+    if (!file) return res.status(400).json({ error: 'Missing file' });
+    const videoPath = path.join(__dirname, 'uploads', file);
+    if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'File not found' });
+    try {
+        const durResult = await execPromise(`${FFMPEG} -i "${videoPath}" 2>&1 | grep Duration | awk '{print $2}' | tr -d ','`);
+        const parts = durResult.stdout.trim().split(':');
+        const duration = parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+        res.json({ duration: Math.round(duration * 10) / 10 });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/api/localizer/jobs', (req, res) => {
     const jobs = Array.from(localizerJobs.values());
     res.json({ jobs });
@@ -3788,17 +4307,9 @@ function getProductTypeFromCode(code, name) {
 }
 // ============ END PACKING API ============
 
-// Serve library.html as main entry point
+// Serve index.html for root
 app.get('/', (req, res) => {
-    // Try public/ first (production), then root (dev)
-    const publicPath = path.join(__dirname, 'public', 'library.html');
-    const rootPath = path.join(__dirname, 'library.html');
-    const fs = require('fs');
-    if (fs.existsSync(publicPath)) {
-        res.sendFile(publicPath);
-    } else {
-        res.sendFile(rootPath);
-    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {

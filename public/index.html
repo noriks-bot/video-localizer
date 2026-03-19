@@ -891,6 +891,21 @@
         </div>
     </div>
     <div id="downloads-overlay" onclick="toggleDownloads()" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; display:none;"></div>
+
+    <!-- Voiceover Preview Modal -->
+    <div id="vo-modal-overlay" onclick="closeVoModal()" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:2000; display:none;"></div>
+    <div id="vo-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:700px; max-height:80vh; background:#1a1a1a; border:1px solid #8b5cf6; border-radius:16px; z-index:2001; overflow-y:auto; padding:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3 style="margin:0; color:#8b5cf6;">🎙️ Voice-over predogled</h3>
+            <button onclick="closeVoModal()" style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;">✕</button>
+        </div>
+        <p style="color:#888; margin-bottom:15px;">AI je pretvoril tvoje tekste v govorne stavke. Uredi če želiš, potem klikni Generiraj.</p>
+        <div id="vo-script-list" style="margin-bottom:20px;"></div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="closeVoModal()" class="btn btn-secondary" style="padding:10px 20px;">❌ Prekliči</button>
+            <button onclick="confirmVoGenerate()" class="btn" style="padding:10px 20px; background:#8b5cf6; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;">🚀 Generiraj z Voice-over</button>
+        </div>
+    </div>
     
     <div class="container">
         <header>
@@ -914,6 +929,10 @@
             <div class="mode-tab" data-mode="localize">
                 <h3>🔄 Lokaliziraj obstoječi video</h3>
                 <p>Naloži video z besedilom → prevedi v 7 jezikov</p>
+            </div>
+            <div class="mode-tab" data-mode="voiceover" style="border-color:#8b5cf6;">
+                <h3>🎙️ Voice-over</h3>
+                <p>Podnapisi + govor iz tekstov knjižnice</p>
             </div>
         </div>
         
@@ -1192,6 +1211,7 @@
                                 </div>
                             </div>
                             
+                            
                             <button class="btn btn-secondary" onclick="queueAllCreatives()" id="btn-queue" disabled>🌙 Dodaj v vrsto</button>
                             <button class="btn btn-primary" onclick="generateAllCreatives()" id="btn-generate" disabled>🚀 Generiraj</button>
                         </div>
@@ -1200,6 +1220,385 @@
             </div>
         </div>
         
+
+        <!-- MODE 3: Voice-over -->
+        <div class="mode-content" id="mode-voiceover">
+            <div style="display:flex; gap:20px; padding:20px;">
+                <!-- Left: Text Library -->
+                <div style="width:300px; flex-shrink:0;">
+                    <h3 style="margin:0 0 10px; font-size:16px;">📚 Teksti</h3>
+                    <select id="vo-product" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; margin-bottom:10px;">
+                        <option value="tshirt">Majica</option>
+                        <option value="boxers">Boksarice</option>
+                        <option value="set">Komplet</option>
+                    </select>
+                    <div id="vo-library-content" style="max-height:70vh; overflow-y:auto;"></div>
+                </div>
+                
+                <!-- Right: Workspace -->
+                <div style="flex:1;">
+                    <!-- Upload -->
+                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                        <h4 style="margin:0 0 10px;">1️⃣ Naloži video</h4>
+                        <div style="display:flex; gap:15px; align-items:center;">
+                            <div style="flex:1; padding:30px; border:2px dashed #333; border-radius:8px; text-align:center; cursor:pointer; color:#888;" id="vo-upload-zone">
+                                📁 Klikni ali povleci video sem
+                                <input type="file" accept="video/*" id="vo-file-input" style="position:absolute; opacity:0; width:0; height:0;">
+                            </div>
+                            <div id="vo-video-preview" style="display:none; max-width:200px;">
+                                <video id="vo-video-el" style="width:100%; border-radius:8px;" controls muted></video>
+                                <div id="vo-video-info" style="color:#888; font-size:12px; margin-top:5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- OR: Upload SRT -->
+                    <div style="background:#0f0f0f; border:1px solid #444; border-radius:12px; padding:15px; margin-bottom:15px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="color:#fbbf24; font-weight:600;">📄 ALI naloži SRT datoteko</span>
+                            <div style="flex:1; padding:10px; border:1px dashed #444; border-radius:6px; text-align:center; cursor:pointer; color:#888; font-size:13px;" id="vo-srt-zone">
+                                Klikni za SRT
+                                <input type="file" accept=".srt,.vtt" id="vo-srt-input" style="position:absolute; opacity:0; width:0; height:0;">
+                            </div>
+                            <span id="vo-srt-status" style="color:#888; font-size:12px;"></span>
+                        </div>
+                    </div>
+                    
+                    
+                    <!-- Selected texts -->
+                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                        <h4 style="margin:0 0 10px;">2️⃣ Izbrani teksti <span id="vo-text-count" style="color:#888; font-size:12px;">(0)</span></h4>
+                        <div id="vo-selected-texts" style="min-height:60px; border:1px dashed #333; border-radius:8px; padding:10px;">
+                            <p style="color:#555; text-align:center; margin:0;">Klikni tekste v knjižnici levo ←</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Naming -->
+                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                        <h4 style="margin:0 0 10px;">3️⃣ Poimenovanje</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                            <div>
+                                <label style="color:#888; font-size:12px;">ID</label>
+                                <input type="text" id="vo-name-id" placeholder="001" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;">
+                            </div>
+                            <div>
+                                <label style="color:#888; font-size:12px;">Produkt</label>
+                                <input type="text" id="vo-product-name" value="tshirt" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;" readonly>
+                            </div>
+                            <div>
+                                <label style="color:#888; font-size:12px;">Avtor</label>
+                                <input type="text" id="vo-author" placeholder="" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview & Generate -->
+                    <div style="background:#0f0f0f; border:1px solid #8b5cf6; border-radius:12px; padding:20px;">
+                        <h4 style="margin:0 0 15px; color:#8b5cf6;">4️⃣ Predogled & Generiranje</h4>
+                        <button id="btn-vo-preview" style="width:100%; padding:14px; background:#8b5cf6; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; margin-bottom:15px;">🇸🇮 SLO Preview</button>
+                        
+                        <div id="vo-script-editor" style="display:none;">
+                            <h5 style="color:#8b5cf6; margin:0 0 10px;">Generirano besedilo:</h5>
+                            <div id="vo-script-items"></div>
+                            <button id="btn-vo-regen" style="width:100%; padding:10px; background:#333; color:#8b5cf6; border:1px solid #8b5cf6; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin:10px 0;">🔄 Regeneriraj besedilo</button>
+                            <div id="vo-preview-video-container" style="display:none; margin:15px 0;">
+                                <video id="vo-preview-video" style="width:100%; border-radius:8px;" controls></video>
+                            </div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px; margin:15px 0;">
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HR" checked> 🇭🇷</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="CZ" checked> 🇨🇿</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="PL" checked> 🇵🇱</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="GR" checked> 🇬🇷</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="IT" checked> 🇮🇹</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HU" checked> 🇭🇺</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="SK" checked> 🇸🇰</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="BG" checked> 🇧🇬</label>
+                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="RO" checked> 🇷🇴</label>
+                            </div>
+                            <button id="btn-vo-generate" style="width:100%; padding:14px; background:#10b981; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:700;">🚀 Generiraj vse z Voice-over</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+        // === MODE 3: VOICE-OVER (self-contained) ===
+        (function() {
+            var voVideoFile = null;
+            var voVideoDuration = 0;
+            var voSelectedTexts = [];
+            var voScript = [];
+            var voSrtLoaded = false;
+            
+            // Upload zone click
+            var uploadZone = document.getElementById('vo-upload-zone');
+            var fileInput = document.getElementById('vo-file-input');
+            if (uploadZone && fileInput) {
+                uploadZone.addEventListener('click', function() { fileInput.click(); });
+                fileInput.addEventListener('change', function() {
+                    var file = this.files[0];
+                    if (!file) return;
+                    uploadZone.textContent = '⏳ Nalagam...';
+                    var formData = new FormData();
+                    formData.append('video', file);
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/upload-video', true);
+                    xhr.onload = function() {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            voVideoFile = data.filename;
+                            document.getElementById('vo-video-el').src = '/uploads/' + voVideoFile;
+                            document.getElementById('vo-video-preview').style.display = 'block';
+                            uploadZone.textContent = '✅ ' + file.name;
+                            fetch('/api/localizer/video-duration?file=' + encodeURIComponent(voVideoFile))
+                                .then(function(r){return r.json()})
+                                .then(function(d){ voVideoDuration = d.duration || 30; document.getElementById('vo-video-info').textContent = voVideoDuration.toFixed(1) + 's'; });
+                        } catch(e) { uploadZone.textContent = '❌ Napaka'; }
+                    };
+                    xhr.onerror = function() { uploadZone.textContent = '❌ Napaka pri nalaganju'; };
+                    xhr.send(formData);
+                });
+            }
+            
+            // Render library
+            function renderLib() {
+                var container = document.getElementById('vo-library-content');
+                if (!container || typeof window.textLibrary === 'undefined') return;
+                var product = document.getElementById('vo-product').value || 'tshirt';
+                document.getElementById('vo-product-name').value = product;
+                var lib = window.textLibrary[product] || {};
+                var catLabels = { hook_problem: '🎯 HOOK', solution: '✅ REŠITEV', benefit: '💎 BENEFIT', cta: '🔥 CTA', social_proof: '⭐ SOCIAL' };
+                var html = '';
+                Object.keys(lib).forEach(function(cat) {
+                    var texts = lib[cat] || [];
+                    if (!texts.length) return;
+                    html += '<div style="margin-bottom:10px;"><div style="color:#8b5cf6; font-size:11px; font-weight:600; margin-bottom:4px;">' + (catLabels[cat]||cat) + '</div>';
+                    texts.forEach(function(text) {
+                        html += '<div style="padding:5px 8px; margin:2px 0; background:#1a1a1a; border:1px solid #333; border-radius:5px; font-size:12px; cursor:pointer; color:#ccc;" onclick="window._voAddText(this.textContent)">' + text + '</div>';
+                    });
+                    html += '</div>';
+                });
+                container.innerHTML = html || '<p style="color:#555;">Ni tekstov</p>';
+            }
+            
+            // Add text by click
+            window._voAddText = function(text) {
+                text = text.trim();
+                if (text && voSelectedTexts.indexOf(text) === -1) {
+                    voSelectedTexts.push(text);
+                    renderSelected();
+                }
+            };
+            
+            function renderSelected() {
+                var container = document.getElementById('vo-selected-texts');
+                document.getElementById('vo-text-count').textContent = '(' + voSelectedTexts.length + ')';
+                if (!voSelectedTexts.length) {
+                    container.innerHTML = '<p style="color:#555; text-align:center; margin:0;">Klikni tekste v knjižnici levo ←</p>';
+                    return;
+                }
+                var html = '';
+                voSelectedTexts.forEach(function(text, i) {
+                    html += '<div style="display:flex; align-items:center; gap:8px; padding:5px 8px; margin:3px 0; background:#1a1a1a; border:1px solid #333; border-radius:6px;">';
+                    html += '<span style="color:#8b5cf6; font-weight:600; min-width:18px;">' + (i+1) + '</span>';
+                    html += '<span style="flex:1; font-size:12px;">' + text + '</span>';
+                    html += '<span onclick="window._voRemoveText(' + i + ')" style="color:#ef4444; cursor:pointer; padding:0 4px;">✕</span>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+            
+            window._voRemoveText = function(idx) {
+                voSelectedTexts.splice(idx, 1);
+                renderSelected();
+            };
+            
+            // SLO Preview
+            document.getElementById('btn-vo-preview').addEventListener('click', async function() {
+                if (!voVideoFile) { alert('Najprej naloži video!'); return; }
+                var btn = this;
+                btn.disabled = true;
+                try {
+                    // If SRT was loaded or script already exists, skip AI generation
+                    if (!voSrtLoaded && (!voScript.length || btn.textContent.includes('Regeneriraj'))) {
+                        if (!voSelectedTexts.length) { alert('Dodaj tekste iz knjižnice ali naloži SRT!'); btn.disabled = false; return; }
+                        btn.textContent = '⏳ Generiram besedilo...';
+                        var scriptData = await window.postJSON('/api/localizer/voiceover-script', {
+                            texts: voSelectedTexts.map(function(t){ return {text:t}; }),
+                            videoDuration: voVideoDuration
+                        });
+                        voScript = scriptData.script || [];
+                        renderScriptEditor();
+                        document.getElementById('vo-script-editor').style.display = 'block';
+                    }
+                    
+                    // Read any edits from textareas
+                    var currentScript = voScript.map(function(item, i) {
+                        var ta = document.getElementById('vo-edit-' + i);
+                        return { text: ta ? ta.value : item.text, start: item.start, end: item.end };
+                    });
+                    
+                    btn.textContent = '⏳ Generiram SLO preview video...';
+                    var previewResp = await window.postJSON('/api/localizer/vo-preview', {
+                        videoClean: voVideoFile,
+                        script: currentScript,
+                    });
+                    if (previewResp.previewUrl) {
+                        document.getElementById('vo-preview-video').src = previewResp.previewUrl + '?t=' + Date.now();
+                        document.getElementById('vo-preview-video-container').style.display = 'block';
+                    }
+                    btn.textContent = '🇸🇮 Regeneriraj SLO Preview';
+                    btn.disabled = false;
+                } catch(e) {
+                    alert('Napaka: ' + (e.message||e));
+                    btn.textContent = '🇸🇮 SLO Preview';
+                    btn.disabled = false;
+                }
+            });
+            
+            function renderScriptEditor() {
+                var container = document.getElementById('vo-script-items');
+                var html = '';
+                voScript.forEach(function(item, i) {
+                    html += '<div style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; margin-bottom:8px;">';
+                    html += '<div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">';
+                    html += '<span style="color:#8b5cf6; font-weight:600;">#' + (i+1) + '</span>';
+                    html += '<span style="color:#666; font-size:11px;">' + item.start.toFixed(1) + 's → ' + item.end.toFixed(1) + 's</span>';
+                    html += '</div>';
+                    html += '<textarea id="vo-edit-' + i + '" style="width:100%; background:#0f0f0f; border:1px solid #333; border-radius:6px; color:#fff; padding:8px; resize:vertical; min-height:34px; font-size:13px;">' + item.text + '</textarea>';
+                    html += '</div>';
+                });
+                container.innerHTML = html;
+            }
+            
+            // Generate all
+            document.getElementById('btn-vo-generate').addEventListener('click', async function() {
+                if (!voVideoFile || !voScript.length) { alert('Najprej naredi SLO Preview!'); return; }
+                var editedScript = voScript.map(function(item, i) {
+                    var ta = document.getElementById('vo-edit-' + i);
+                    return { text: ta ? ta.value : item.text, start: item.start, end: item.end };
+                });
+                var countries = Array.from(document.querySelectorAll('.vo-country-check:checked')).map(function(cb){return cb.value;});
+                if (!countries.length) { alert('Izberi vsaj eno državo!'); return; }
+                var id = document.getElementById('vo-name-id').value || '001';
+                var product = document.getElementById('vo-product').value || 'tshirt';
+                var author = document.getElementById('vo-author').value || (typeof currentUser !== 'undefined' ? currentUser : 'VO');
+                var d = new Date();
+                var date = String(d.getDate()).padStart(2,'0') + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getFullYear()).slice(-2);
+                var btn = this;
+                btn.textContent = '⏳ Generiram...';
+                btn.disabled = true;
+                try {
+                    await window.postJSON('/api/localizer/generate', {
+                        videoClean: voVideoFile, name: id+'_'+date+'_'+product+'_VO_'+author,
+                        namingParts: {id:id, date:date, product:product, type:'VO', author:author},
+                        texts: voSelectedTexts.map(function(t){return {text:t};}),
+                        mode: 'voiceover', voiceoverScript: editedScript, videoDuration: voVideoDuration,
+                        countries: countries, source: 'library', style: 'white', fontSize: 90
+                    });
+                    alert('✅ Voice-over generiranje startano! Poglej v Downloads.');
+                } catch(e) { alert('Napaka: ' + (e.message||e)); }
+                btn.textContent = '🚀 Generiraj vse z Voice-over';
+                btn.disabled = false;
+            });
+            
+            // Regenerate script only (no video)
+            document.getElementById("btn-vo-regen").addEventListener("click", async function() {
+                if (!voVideoFile) { alert("Najprej naloži video!"); return; }
+                if (!voSelectedTexts.length) { alert("Dodaj tekste!"); return; }
+                var btn = this;
+                btn.textContent = "⏳ Generiram novo besedilo...";
+                voSrtLoaded = false;
+                btn.disabled = true;
+                try {
+                    var scriptData = await window.postJSON("/api/localizer/voiceover-script", {
+                        texts: voSelectedTexts.map(function(t){ return {text:t}; }),
+                        videoDuration: voVideoDuration
+                    });
+                    voScript = scriptData.script || [];
+                    renderScriptEditor();
+                    btn.textContent = "🔄 Regeneriraj besedilo";
+                    btn.disabled = false;
+                } catch(e) {
+                    alert("Napaka: " + (e.message||e));
+                    btn.textContent = "🔄 Regeneriraj besedilo";
+                    btn.disabled = false;
+                }
+            });
+            // SRT upload
+            var srtZone = document.getElementById('vo-srt-zone');
+            var srtInput = document.getElementById('vo-srt-input');
+            if (srtZone && srtInput) {
+                srtZone.addEventListener('click', function() { srtInput.click(); });
+                srtInput.addEventListener('change', function() {
+                    var file = this.files[0];
+                    if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var content = e.target.result;
+                        var parsed = parseSRT(content);
+                        if (parsed.length > 0) {
+                            voScript = parsed;
+                            voSrtLoaded = true;
+                            renderScriptEditor();
+                            document.getElementById('vo-script-editor').style.display = 'block';
+                            document.getElementById('vo-srt-status').textContent = '✅ ' + parsed.length + ' stavkov';
+                            srtZone.textContent = '✅ ' + file.name;
+                        } else {
+                            document.getElementById('vo-srt-status').textContent = '❌ Napaka pri branju';
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            }
+            
+            function parseSRT(text) {
+                var blocks = text.trim().split(/\n\s*\n/);
+                var result = [];
+                blocks.forEach(function(block) {
+                    var lines = block.trim().split('\n');
+                    if (lines.length < 2) return;
+                    var timeLine = lines.find(function(l) { return l.includes('-->'); });
+                    if (!timeLine) return;
+                    var parts = timeLine.split('-->');
+                    var start = srtTimeToSec(parts[0].trim());
+                    var end = srtTimeToSec(parts[1].trim());
+                    var textLines = [];
+                    var foundTime = false;
+                    lines.forEach(function(l) {
+                        if (l.includes('-->')) { foundTime = true; return; }
+                        if (foundTime && l.trim()) textLines.push(l.trim());
+                    });
+                    if (textLines.length > 0 && !isNaN(start) && !isNaN(end)) {
+                        result.push({ text: textLines.join(' '), start: start, end: end });
+                    }
+                });
+                return result;
+            }
+            
+            function srtTimeToSec(timeStr) {
+                timeStr = timeStr.replace(',', '.');
+                var p = timeStr.split(':');
+                if (p.length === 3) return parseFloat(p[0]) * 3600 + parseFloat(p[1]) * 60 + parseFloat(p[2]);
+                if (p.length === 2) return parseFloat(p[0]) * 60 + parseFloat(p[1]);
+                return parseFloat(p[0]);
+            }
+            // Product change
+            document.getElementById('vo-product').addEventListener('change', renderLib);
+            
+            // Render on tab switch
+            var origTabHandler = null;
+            document.querySelectorAll('.mode-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    if (tab.dataset.mode === 'voiceover') setTimeout(renderLib, 100);
+                });
+            });
+            
+            // Initial delayed render
+            setTimeout(renderLib, 1500);
+        })();
+        </script>
+        </div>
         <!-- MODE 2: Localize (Bulk) -->
         <div class="mode-content" id="mode-localize">
             <div class="layout">
@@ -1466,7 +1865,7 @@
             'teja': 'teja'
         };
         
-        let currentUser = null;
+        let currentUser = window.currentUser = null;
         
         // Get storage key with user prefix
         function userKey(key) {
@@ -1602,7 +2001,7 @@
         // ============ END AUTHENTICATION ============
         
         // Text Library - organized by product and category
-        const textLibrary = {
+        const textLibrary = window.textLibrary = {
             tshirt: {
                 hook_problem: [
                     "Visi kot vreča?",
@@ -2287,7 +2686,7 @@
                     }
                     
                     // Call generate API (starts in background, doesn't wait to finish)
-                    const response = await postJSON('/api/localizer/generate', {
+                    let generatePayload = {
                         videoClean: creative.filename,
                         name: name,
                         namingParts: creative.namingParts,
@@ -2299,9 +2698,29 @@
                         countries: selectedCountries,
                         source: 'library',
                         perTextStyles: true,
-                        uppercase: creative.uppercase || false
-                    });
-                    console.log('Started generation for:', name, response);
+                        uppercase: creative.uppercase || false,
+                        mode: currentGenerateMode
+                    };
+                    
+                    // If voiceover mode, get script from AI first
+                    // If voiceover mode, show preview modal first
+                    if (currentGenerateMode === 'voiceover') {
+                        document.getElementById('btn-generate').textContent = '🎙️ Pripravljam scenarij...';
+                        const durData = await (await fetch('/api/localizer/video-duration?file=' + encodeURIComponent(creative.filename))).json();
+                        const scriptData = await window.postJSON('/api/localizer/voiceover-script', {
+                            texts: texts,
+                            videoDuration: durData.duration || 30
+                        });
+                        generatePayload.videoDuration = durData.duration;
+                        // Store pending data and show modal
+                        window._pendingVoData = { payload: generatePayload, script: scriptData.script, allPayloads: [] };
+                        showVoModal(scriptData.script, durData.duration);
+                        document.getElementById('btn-generate').textContent = '🚀 Generiraj';
+                        document.getElementById('btn-generate').disabled = false;
+                        return; // Stop here - user will confirm in modal
+                    }
+                    
+                    const response = await window.postJSON('/api/localizer/generate', generatePayload);
                     
                     started++;
                     document.getElementById('btn-generate').textContent = `⏳ Startal ${started}/${readyCreatives.length}`;
@@ -2429,7 +2848,7 @@
                     const { id, date, product, type, author } = creative.namingParts;
                     const name = id + '_' + date + '_' + product + '_' + type + '_' + author;
                     
-                    await postJSON('/api/queue/add', {
+                    await window.postJSON('/api/queue/add', {
                         mode: 'library',
                         name: name,
                         namingParts: creative.namingParts,
@@ -2584,6 +3003,7 @@
                 document.querySelectorAll('.mode-content').forEach(c => c.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(`mode-${tab.dataset.mode}`).classList.add('active');
+                if (tab.dataset.mode === 'voiceover' && typeof renderVoLibrary === 'function') renderVoLibrary();
             });
         });
         
@@ -3044,6 +3464,343 @@
         
         // Mode 1 country functions
         window.getSelectedCountries = function() {
+
+        // === VOICEOVER MODE ===
+        let currentGenerateMode = 'subtitles'; // 'subtitles' or 'voiceover'
+        
+        window.setGenerateMode = function(mode) {
+            currentGenerateMode = mode;
+            const btnSub = document.getElementById('mode-btn-subtitles');
+            const btnVo = document.getElementById('mode-btn-voiceover');
+            if (mode === 'subtitles') {
+                btnSub.style.background = '#10b981';
+                btnSub.style.color = '#000';
+                btnSub.style.fontWeight = '600';
+                btnVo.style.background = '#333';
+                btnVo.style.color = '#888';
+                btnVo.style.fontWeight = 'normal';
+            } else {
+                btnVo.style.background = '#8b5cf6';
+                btnVo.style.color = '#fff';
+                btnVo.style.fontWeight = '600';
+                btnSub.style.background = '#333';
+                btnSub.style.color = '#888';
+                btnSub.style.fontWeight = 'normal';
+            }
+        };
+        
+        // Get video duration from video element
+        async function getVideoDuration(videoFile) {
+            try {
+                const resp = await fetch('/api/localizer/video-duration?file=' + encodeURIComponent(videoFile));
+                const data = await resp.json();
+                return data.duration || 30;
+            } catch(e) { return 30; }
+        }
+        // === END VOICEOVER MODE ===
+        // Bind click events for voiceover mode buttons
+        document.getElementById("mode-btn-subtitles").addEventListener("click", function() { setGenerateMode("subtitles"); });
+        document.getElementById("mode-btn-voiceover").addEventListener("click", function() { setGenerateMode("voiceover"); });
+        console.log("Voiceover mode buttons initialized");
+
+        // === VOICEOVER MODAL ===
+        window._pendingVoData = null;
+        
+        window.showVoModal = function(script, duration) {
+            const container = document.getElementById('vo-script-list');
+            container.innerHTML = '';
+            
+            script.forEach((item, i) => {
+                const div = document.createElement('div');
+                div.style.cssText = 'background:#0f0f0f; border:1px solid #333; border-radius:8px; padding:12px; margin-bottom:8px;';
+                div.innerHTML = `
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
+                        <span style="color:#8b5cf6; font-weight:600; min-width:30px;">#${i+1}</span>
+                        <span style="color:#666; font-size:12px;">${item.start.toFixed(1)}s → ${item.end.toFixed(1)}s</span>
+                        <span style="color:#444; font-size:11px;">(${(item.end - item.start).toFixed(1)}s)</span>
+                    </div>
+                    <textarea id="vo-text-${i}" style="width:100%; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; padding:8px; resize:vertical; min-height:40px; font-size:14px;">${item.text}</textarea>
+                `;
+                container.appendChild(div);
+            });
+            
+            // Add total duration info
+            const info = document.createElement('div');
+            info.style.cssText = 'color:#666; font-size:12px; text-align:center; padding:10px;';
+            info.textContent = `Video: ${duration}s | ${script.length} stavkov`;
+            container.appendChild(info);
+            
+            document.getElementById('vo-modal').style.display = 'block';
+            document.getElementById('vo-modal-overlay').style.display = 'block';
+        };
+        
+        window.closeVoModal = function() {
+            document.getElementById('vo-modal').style.display = 'none';
+            document.getElementById('vo-modal-overlay').style.display = 'none';
+            window._pendingVoData = null;
+        };
+        
+        window.confirmVoGenerate = async function() {
+            if (!window._pendingVoData) return;
+            
+            // Read edited texts from modal
+            const script = window._pendingVoData.script.map((item, i) => {
+                const textarea = document.getElementById('vo-text-' + i);
+                return {
+                    text: textarea ? textarea.value : item.text,
+                    start: item.start,
+                    end: item.end
+                };
+            });
+            
+            const payload = window._pendingVoData.payload;
+            payload.voiceoverScript = script;
+            payload.mode = 'voiceover';
+            
+            closeVoModal();
+            
+            document.getElementById('btn-generate').textContent = '🎙️ Generiram voice-over...';
+            document.getElementById('btn-generate').disabled = true;
+            
+            try {
+                const response = await window.postJSON('/api/localizer/generate', payload);
+                console.log('Started voiceover generation:', response);
+                document.getElementById('btn-generate').textContent = '🚀 Generiraj';
+                document.getElementById('btn-generate').disabled = false;
+            } catch (e) {
+                console.error('Voiceover generation failed:', e);
+                alert('Napaka pri generiranju: ' + e.message);
+                document.getElementById('btn-generate').textContent = '🚀 Generiraj';
+                document.getElementById('btn-generate').disabled = false;
+            }
+        };
+        // === END VOICEOVER MODAL ===
+
+        // === MODE 3: VOICE-OVER ===
+        let voVideoFile = null;
+        let voVideoDuration = 0;
+        let voSelectedTexts = [];
+        let voScript = [];
+        
+        // Render VO library (reuse textLibrary from mode 1)
+        function renderVoLibrary() {
+            const container = document.getElementById('vo-library-content');
+            if (!container) return;
+            const product = document.getElementById('vo-product')?.value || 'tshirt';
+            const lib = textLibrary[product] || {};
+            let html = '';
+            Object.keys(lib).forEach(category => {
+                const texts = lib[category] || [];
+                if (texts.length === 0) return;
+                const catLabels = { hook_problem: '🎯 HOOK + PROBLEM', solution: '✅ REŠITEV', benefit: '💎 BENEFIT', cta: '🔥 CTA', social_proof: '⭐ SOCIAL PROOF' };
+                html += '<div style="margin-bottom:12px;">';
+                html += '<h5 style="color:#8b5cf6; margin:0 0 6px; font-size:12px;">' + (catLabels[category] || category) + '</h5>';
+                texts.forEach((text, idx) => {
+                    html += '<div draggable="true" ondragstart="startVoTextDrag(event, \'' + category + '\', ' + idx + ')" style="padding:6px 10px; margin:3px 0; background:#1a1a1a; border:1px solid #333; border-radius:6px; font-size:12px; cursor:grab; color:#ccc;">' + text + '</div>';
+                });
+                html += '</div>';
+            });
+            container.innerHTML = html || '<p style="color:#666;">Izberi produkt</p>';
+        }
+        
+        // Handle video upload for VO mode
+        window.handleVoVideoUpload = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            // Save file reference before modifying DOM
+            const formData = new FormData();
+            formData.append('video', file);
+            const fileName = file.name;
+            
+            document.getElementById('vo-upload-label').innerHTML = '⏳ Nalagam...<input type="file" accept="video/*" id="vo-video-input" style="display:none;" onchange="handleVoVideoUpload(this)">';
+            
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload-video', true);
+                xhr.onload = async function() {
+                    const data = JSON.parse(xhr.responseText);
+                    voVideoFile = data.filename;
+                    
+                    const videoEl = document.getElementById('vo-video-el');
+                    videoEl.src = '/uploads/' + voVideoFile;
+                    document.getElementById('vo-video-preview').style.display = 'block';
+                    document.getElementById('vo-upload-label').innerHTML = '✅ ' + fileName + '<input type="file" accept="video/*" id="vo-video-input" style="display:none;" onchange="handleVoVideoUpload(this)">';
+                    
+                    const durResp = await fetch('/api/localizer/video-duration?file=' + encodeURIComponent(voVideoFile));
+                    const durData = await durResp.json();
+                    voVideoDuration = durData.duration || 30;
+                    document.getElementById('vo-video-info').textContent = voVideoDuration.toFixed(1) + 's';
+                };
+                xhr.onerror = function() {
+                    document.getElementById('vo-upload-label').innerHTML = '❌ Napaka pri nalaganju<input type="file" accept="video/*" id="vo-video-input" style="display:none;" onchange="handleVoVideoUpload(this)">';
+                };
+                xhr.send(formData);
+            } catch (e) {
+                document.getElementById('vo-upload-label').innerHTML = '❌ ' + e.message + '<input type="file" accept="video/*" id="vo-video-input" style="display:none;" onchange="handleVoVideoUpload(this)">';
+            }
+        };
+        window.startVoTextDrag = function(event, category, idx) {
+            event.dataTransfer.setData('text/plain', JSON.stringify({ category, idx }));
+        };
+        
+        window.handleVoTextDrop = function(event) {
+            event.preventDefault();
+            event.currentTarget.style.borderColor = '#333';
+            
+            try {
+                const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+                const product = document.getElementById('vo-product')?.value || 'tshirt';
+                const lib = textLibrary[product] || {};
+                const text = lib[data.category]?.[data.idx];
+                if (text && !voSelectedTexts.includes(text)) {
+                    voSelectedTexts.push(text);
+                    renderVoSelectedTexts();
+                }
+            } catch (e) {}
+        };
+        
+        function renderVoSelectedTexts() {
+            const container = document.getElementById('vo-selected-texts');
+            document.getElementById('vo-text-count').textContent = '(' + voSelectedTexts.length + ')';
+            
+            if (voSelectedTexts.length === 0) {
+                container.innerHTML = '<p style="color:#555; text-align:center; margin:0;" id="vo-drop-hint">Povleci tekste sem iz knjižnice ←</p>';
+                return;
+            }
+            
+            let html = '';
+            voSelectedTexts.forEach((text, i) => {
+                html += '<div style="display:flex; align-items:center; gap:8px; padding:6px 10px; margin:4px 0; background:#1a1a1a; border:1px solid #333; border-radius:6px;">';
+                html += '<span style="color:#8b5cf6; font-weight:600; min-width:20px;">' + (i + 1) + '</span>';
+                html += '<span style="flex:1; font-size:13px;">' + text + '</span>';
+                html += '<button onclick="removeVoText(' + i + ')" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:16px;">✕</button>';
+                html += '</div>';
+            });
+            container.innerHTML = html;
+        }
+        
+        window.removeVoText = function(idx) {
+            voSelectedTexts.splice(idx, 1);
+            renderVoSelectedTexts();
+        };
+        
+        // SLO Preview - generate script + preview video
+        window.generateVoPreview = async function() {
+            if (!voVideoFile) { alert('Najprej naloži video!'); return; }
+            if (voSelectedTexts.length === 0) { alert('Dodaj tekste iz knjižnice!'); return; }
+            
+            const btn = document.getElementById('btn-vo-preview');
+            btn.textContent = '⏳ Generiram besedilo...';
+            btn.disabled = true;
+            
+            try {
+                // Step 1: Get voiceover script from AI
+                const scriptData = await window.postJSON('/api/localizer/voiceover-script', {
+                    texts: voSelectedTexts.map(t => ({ text: t })),
+                    videoDuration: voVideoDuration
+                });
+                
+                voScript = scriptData.script || [];
+                
+                // Step 2: Show script editor
+                renderVoScriptEditor();
+                document.getElementById('vo-script-editor').style.display = 'block';
+                
+                // Step 3: Generate SLO preview video with subtitles
+                btn.textContent = '⏳ Generiram SLO preview video...';
+                
+                const previewResp = await window.postJSON('/api/localizer/vo-preview', {
+                    videoClean: voVideoFile,
+                    script: voScript,
+                    videoDuration: voVideoDuration
+                });
+                
+                if (previewResp.previewUrl) {
+                    const previewVideo = document.getElementById('vo-preview-video');
+                    previewVideo.src = previewResp.previewUrl + '?t=' + Date.now();
+                    document.getElementById('vo-preview-video-container').style.display = 'block';
+                }
+                
+                btn.textContent = '🇸🇮 Regeneriraj SLO Preview';
+                btn.disabled = false;
+            } catch (e) {
+                alert('Napaka: ' + e.message);
+                btn.textContent = '🇸🇮 SLO Preview';
+                btn.disabled = false;
+            }
+        };
+        
+        function renderVoScriptEditor() {
+            const container = document.getElementById('vo-script-items');
+            let html = '';
+            voScript.forEach((item, i) => {
+                html += '<div style="background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; margin-bottom:8px;">';
+                html += '<div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">';
+                html += '<span style="color:#8b5cf6; font-weight:600;">#' + (i + 1) + '</span>';
+                html += '<span style="color:#666; font-size:11px;">' + item.start.toFixed(1) + 's → ' + item.end.toFixed(1) + 's (' + (item.end - item.start).toFixed(1) + 's)</span>';
+                html += '</div>';
+                html += '<textarea id="vo-edit-' + i + '" style="width:100%; background:#0f0f0f; border:1px solid #333; border-radius:6px; color:#fff; padding:8px; resize:vertical; min-height:36px; font-size:13px;">' + item.text + '</textarea>';
+                html += '</div>';
+            });
+            html += '<div style="color:#666; font-size:11px; text-align:center; padding:5px;">Video: ' + voVideoDuration.toFixed(1) + 's | ' + voScript.length + ' stavkov</div>';
+            container.innerHTML = html;
+        }
+        
+        // Generate all countries with voice-over
+        window.generateVoAll = async function() {
+            if (!voVideoFile || voScript.length === 0) { alert('Najprej naredi SLO Preview!'); return; }
+            
+            // Read edited script
+            const editedScript = voScript.map((item, i) => {
+                const textarea = document.getElementById('vo-edit-' + i);
+                return { text: textarea ? textarea.value : item.text, start: item.start, end: item.end };
+            });
+            
+            const selectedCountries = Array.from(document.querySelectorAll('.vo-country-check:checked')).map(cb => cb.value);
+            if (selectedCountries.length === 0) { alert('Izberi vsaj eno državo!'); return; }
+            
+            const id = document.getElementById('vo-name-id').value || '001';
+            const product = document.getElementById('vo-product').value || 'tshirt';
+            const author = document.getElementById('vo-author').value || currentUser || 'VO';
+            const today = new Date();
+            const date = String(today.getDate()).padStart(2,'0') + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getFullYear()).slice(-2);
+            
+            const btn = document.getElementById('btn-vo-generate');
+            btn.textContent = '⏳ Generiram...';
+            btn.disabled = true;
+            
+            try {
+                const resp = await window.postJSON('/api/localizer/generate', {
+                    videoClean: voVideoFile,
+                    name: id + '_' + date + '_' + product + '_VO_' + author,
+                    namingParts: { id, date, product, type: 'VO', author },
+                    texts: voSelectedTexts.map(t => ({ text: t })),
+                    mode: 'voiceover',
+                    voiceoverScript: editedScript,
+                    videoDuration: voVideoDuration,
+                    countries: selectedCountries,
+                    source: 'library',
+                    style: 'white',
+                    fontSize: 90
+                });
+                
+                alert('✅ Voice-over generiranje startano! Poglej v Downloads.');
+                btn.textContent = '🚀 Generiraj vse z Voice-over';
+                btn.disabled = false;
+            } catch (e) {
+                alert('Napaka: ' + e.message);
+                btn.textContent = '🚀 Generiraj vse z Voice-over';
+                btn.disabled = false;
+            }
+        };
+        
+        // Update VO library when product changes
+        document.getElementById('vo-product')?.addEventListener('change', renderVoLibrary);
+        
+        // Initial render
+        setTimeout(renderVoLibrary, 2000);
+        // === END MODE 3 ===
             const checked = document.querySelectorAll('.country-check:checked');
             return Array.from(checked).map(cb => cb.value);
         };
@@ -3324,7 +4081,7 @@
         // Preview button onclick is in HTML
         
         // XHR helpers
-        function postJSON(url, data) {
+        window.postJSON = function postJSON(url, data) {
             return new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', url, true);
@@ -3472,7 +4229,7 @@
             // Generate preview
             try {
                 console.log('Sending preview with style:', selectedStyle, 'fontSize:', fontSize, 'hookStyle:', hookStyle, 'ctaStyle:', ctaStyleValue);
-                const data = await postJSON('/api/localizer/preview', {
+                const data = await window.postJSON('/api/localizer/preview', {
                     videoClean: videoFile, name, texts, language: 'SLO', style: selectedStyle, fontSize,
                     hookStyle: useHookStyle ? hookStyle : null,
                     ctaStyle: useCtaStyle ? ctaStyleValue : null
@@ -3540,7 +4297,7 @@
             document.getElementById('btn-generate').disabled = true;
             
             try {
-                const data = await postJSON('/api/localizer/generate', {
+                const data = await window.postJSON('/api/localizer/generate', {
                     videoClean: uploadedFilename, name, texts, style: selectedStyle, fontSize, namingParts
                 });
                 if (data.error) throw new Error(data.error);
@@ -4073,7 +4830,7 @@
                 try {
                     const name = `${pair.id}_${date}_${pair.product}_${pair.type}_${pair.author}`;
                     
-                    await postJSON('/api/localizer/generate', {
+                    await window.postJSON('/api/localizer/generate', {
                         videoClean: pair.cleanFilename,
                         name: name,
                         namingParts: { id: pair.id, date, product: pair.product, type: pair.type, author: pair.author },
@@ -4135,7 +4892,7 @@
                 try {
                     const name = `${pair.id}_${date}_${pair.product}_${pair.type}_${pair.author}`;
                     
-                    await postJSON('/api/queue/add', {
+                    await window.postJSON('/api/queue/add', {
                         mode: 'localize',
                         name: name,
                         namingParts: { id: pair.id, date, product: pair.product, type: pair.type, author: pair.author },
@@ -4525,7 +5282,7 @@
             btn.disabled = true;
             
             try {
-                const transData = await postJSON('/api/localizer/to-slovenian', {
+                const transData = await window.postJSON('/api/localizer/to-slovenian', {
                     texts: detectedTexts.map(t => t.text)
                 });
                 
@@ -4620,7 +5377,7 @@
             }
             
             try {
-                const data = await postJSON('/api/queue/add', {
+                const data = await window.postJSON('/api/queue/add', {
                     mode: 'library',
                     name,
                     namingParts,
@@ -4662,7 +5419,7 @@
             }
             
             try {
-                const data = await postJSON('/api/queue/add', {
+                const data = await window.postJSON('/api/queue/add', {
                     mode: 'localize',
                     name,
                     namingParts,
@@ -4733,7 +5490,7 @@
         window.removeFromQueue = async function(jobId) {
             if (!confirm('Odstrani iz vrste?')) return;
             try {
-                await postJSON('/api/queue/remove', { jobId });
+                await window.postJSON('/api/queue/remove', { jobId });
                 refreshQueue();
             } catch(e) {
                 alert('Napaka: ' + e.message);
@@ -4744,7 +5501,7 @@
         window.processQueueNow = async function() {
             if (!confirm('Začni procesiranje vseh v vrsti ZDAJ?')) return;
             try {
-                const data = await postJSON('/api/queue/process', {});
+                const data = await window.postJSON('/api/queue/process', {});
                 alert(`🚀 Procesiranje začeto! ${data.count} job(s) v vrsti.`);
                 refreshQueue();
             } catch(e) {

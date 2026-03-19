@@ -3,3 +3,5 @@ node_modules/
 *.log
 uploads/
 *.bak
+ecosystem.config.js
+.env
