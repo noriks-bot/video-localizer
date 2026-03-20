@@ -367,6 +367,9 @@
                                 </div>
                                 <div style="display: flex; gap: 10px; align-items: center;">
                                     <div class="job-date">${formatDate(job.timestamp)}</div>
+                                    <a href="/api/localizer/job/${job.id}/zip" class="btn btn-success btn-sm" title="Prenesi vse kot ZIP">
+                                        📦 Prenesi vse
+                                    </a>
                                     <button class="btn btn-danger btn-sm" onclick="deleteJob('${job.id}')" title="Zbriši vse videe">
                                         🗑️
                                     </button>
