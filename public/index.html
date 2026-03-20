@@ -1026,8 +1026,16 @@
                             <input type="file" id="file-input" accept="video/*" hidden>
                         </div>
                         <div class="preview-section" id="preview-section" style="display:none">
-                            <h4 style="margin-bottom:10px">👁️ Preview</h4>
-                            <video id="video-preview" class="video-preview" controls></video>
+                            <div style="display:flex; gap:15px; align-items:flex-start;">
+                                <div style="flex:1;">
+                                    <h4 style="margin-bottom:10px">🎬 Original</h4>
+                                    <video id="video-preview" class="video-preview" style="display:block; width:100%; border-radius:8px;" controls></video>
+                                </div>
+                                <div style="flex:1;">
+                                    <h4 style="margin-bottom:10px">📝 Live Preview</h4>
+                                    <canvas id="live-preview-canvas" style="width:100%; border-radius:8px; background:#000; cursor:pointer;" onclick="toggleLivePreviewPlay()"></canvas>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1226,239 +1234,213 @@
 
         <!-- MODE 3: Voice-over -->
         <div class="mode-content" id="mode-voiceover">
-            <div style="display:flex; gap:20px; padding:20px;">
-                <!-- Left: Text Library -->
-                <div style="width:300px; flex-shrink:0;">
-                    <h3 style="margin:0 0 10px; font-size:16px;">📚 Teksti</h3>
-                    <select id="vo-product" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; margin-bottom:10px;">
-                        <option value="tshirt">Majica</option>
-                        <option value="boxers">Boksarice</option>
-                        <option value="set">Komplet</option>
-                    </select>
-                    <div id="vo-library-content" style="max-height:70vh; overflow-y:auto;"></div>
+            <div style="padding:20px; max-width:900px; margin:0 auto;">
+                
+                <!-- Step 1: Upload video -->
+                <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0;">1️⃣ Naloži video</h4>
+                        <button onclick="window._voReset()" style="background:#7f1d1d; border:1px solid #ef4444; color:#fff; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px;">🗑️ Počisti vse</button>
+                    </div>
+                    <div style="display:flex; gap:15px; align-items:center;">
+                        <div style="flex:1; padding:30px; border:2px dashed #333; border-radius:8px; text-align:center; cursor:pointer; color:#888;" id="vo-upload-zone">
+                            📁 Klikni ali povleci video sem
+                            <input type="file" accept="video/*" id="vo-file-input" style="position:absolute; opacity:0; width:0; height:0;">
+                        </div>
+                        <div id="vo-video-preview" style="display:none; max-width:200px;">
+                            <video id="vo-video-el" style="width:100%; border-radius:8px;" controls muted></video>
+                            <div id="vo-video-info" style="color:#888; font-size:12px; margin-top:5px;"></div>
+                        </div>
+                    </div>
                 </div>
                 
-                <!-- Right: Workspace -->
-                <div style="flex:1;">
-                    <!-- Upload -->
-                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
-                        <h4 style="margin:0 0 10px;">1️⃣ Naloži video</h4>
-                        <div style="display:flex; gap:15px; align-items:center;">
-                            <div style="flex:1; padding:30px; border:2px dashed #333; border-radius:8px; text-align:center; cursor:pointer; color:#888;" id="vo-upload-zone">
-                                📁 Klikni ali povleci video sem
-                                <input type="file" accept="video/*" id="vo-file-input" style="position:absolute; opacity:0; width:0; height:0;">
-                            </div>
-                            <div id="vo-video-preview" style="display:none; max-width:200px;">
-                                <video id="vo-video-el" style="width:100%; border-radius:8px;" controls muted></video>
-                                <div id="vo-video-info" style="color:#888; font-size:12px; margin-top:5px;"></div>
-                            </div>
+                <!-- OR: Upload SRT -->
+                <div style="background:#0f0f0f; border:1px solid #444; border-radius:12px; padding:15px; margin-bottom:15px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="color:#fbbf24; font-weight:600;">📄 ALI naloži SRT datoteko</span>
+                        <div style="flex:1; padding:10px; border:1px dashed #444; border-radius:6px; text-align:center; cursor:pointer; color:#888; font-size:13px;" id="vo-srt-zone">
+                            Klikni za SRT
+                            <input type="file" accept=".srt,.vtt" id="vo-srt-input" style="position:absolute; opacity:0; width:0; height:0;">
+                        </div>
+                        <span id="vo-srt-status" style="color:#888; font-size:12px;"></span>
+                    </div>
+                </div>
+
+                <!-- Step 2: Besedila / poante -->
+                <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                    <h4 style="margin:0 0 10px;">2️⃣ Besedila / poante</h4>
+                    <p style="color:#888; font-size:12px; margin:0 0 10px;">Vpiši ključne poante, besedila, CTA — vsako v svojo vrstico. AI bo iz tega sestavil zgodbo.</p>
+                    <textarea id="vo-points" style="width:100%; min-height:160px; background:#1a1a1a; border:1px solid #333; border-radius:8px; color:#fff; padding:12px; font-size:14px; resize:vertical; line-height:1.8; font-family:monospace;" placeholder="4+2 brezplačno 🔥
+Najboljša majica, kar jih boste kdaj nosili
+Udobnejša zgoraj, bolj sproščena v predelu trupa
+Iz super mehkega materiala
+Čas je, da si nadenete majico NORIKS"></textarea>
+                </div>
+
+                <!-- Step 3: Prompt -->
+                <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                    <h4 style="margin:0 0 10px;">3️⃣ Prompt za AI 🎯</h4>
+                    <textarea id="vo-prompt" style="width:100%; min-height:120px; background:#1a1a1a; border:1px solid #333; border-radius:8px; color:#fff; padding:12px; font-size:13px; resize:vertical; line-height:1.6;">Role: Act as an expert Direct-Response Copywriter and Scriptwriter for short-form video ads (TikTok, Reels, Shorts).
+
+Task: Create a Story: Transform these points into a cohesive, high-converting storytelling script in Slovenian.
+Structure:
+* Hook: Start with a relatable problem or a bold claim about comfort/style.
+* Transformation: Seamlessly weave in the benefits to show how the product changes the user's day.
+* Offer & CTA: End with urgency and the specific offer from the text.
+
+Style: Authentic, confident, persuasive — a narrative that makes the viewer feel the comfort, not just a list of features.</textarea>
+                </div>
+                
+                <!-- Step 4: Naming -->
+                <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
+                    <h4 style="margin:0 0 10px;">4️⃣ Poimenovanje</h4>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:8px;">
+                        <div>
+                            <label style="color:#888; font-size:11px;">ID</label>
+                            <input type="text" id="vo-name-id" placeholder="ID333" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="color:#888; font-size:11px;">Datum</label>
+                            <input type="text" id="vo-name-date" readonly style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; font-size:13px;">
+                        </div>
+                        <div>
+                            <label style="color:#888; font-size:11px;">Produkt</label>
+                            <select id="vo-name-product" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; font-size:13px;">
+                                <option value="tshirt">tshirt</option>
+                                <option value="boxers">boxers</option>
+                                <option value="set">set</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="color:#888; font-size:11px;">Tip</label>
+                            <input type="text" value="VO" readonly style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#8b5cf6; font-size:13px; font-weight:600;">
+                        </div>
+                        <div>
+                            <label style="color:#888; font-size:11px;">Avtor</label>
+                            <input type="text" id="vo-author" placeholder="DD" maxlength="4" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff; font-size:13px; text-transform:uppercase;">
                         </div>
                     </div>
-                    <!-- OR: Upload SRT -->
-                    <div style="background:#0f0f0f; border:1px solid #444; border-radius:12px; padding:15px; margin-bottom:15px;">
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span style="color:#fbbf24; font-weight:600;">📄 ALI naloži SRT datoteko</span>
-                            <div style="flex:1; padding:10px; border:1px dashed #444; border-radius:6px; text-align:center; cursor:pointer; color:#888; font-size:13px;" id="vo-srt-zone">
-                                Klikni za SRT
-                                <input type="file" accept=".srt,.vtt" id="vo-srt-input" style="position:absolute; opacity:0; width:0; height:0;">
-                            </div>
-                            <span id="vo-srt-status" style="color:#888; font-size:12px;"></span>
-                        </div>
-                    </div>
+                </div>
+
+                <!-- Step 5: Preview & Generate -->
+                <div style="background:#0f0f0f; border:1px solid #8b5cf6; border-radius:12px; padding:20px;">
+                    <h4 style="margin:0 0 15px; color:#8b5cf6;">5️⃣ Predogled & Generiranje</h4>
+                    <button id="btn-vo-preview" style="width:100%; padding:14px; background:#8b5cf6; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; margin-bottom:15px;">🇸🇮 SLO Preview</button>
                     
-                    
-                    <!-- Selected texts -->
-                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
-                        <h4 style="margin:0 0 10px;">2️⃣ Izbrani teksti <span id="vo-text-count" style="color:#888; font-size:12px;">(0)</span></h4>
-                        <div id="vo-selected-texts" style="min-height:60px; border:1px dashed #333; border-radius:8px; padding:10px;">
-                            <p style="color:#555; text-align:center; margin:0;">Klikni tekste v knjižnici levo ←</p>
+                    <div id="vo-script-editor" style="display:none;">
+                        <h5 style="color:#8b5cf6; margin:0 0 10px;">Generirano besedilo:</h5>
+                        <div id="vo-script-items"></div>
+                        <button id="btn-vo-regen" style="width:100%; padding:10px; background:#333; color:#8b5cf6; border:1px solid #8b5cf6; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin:10px 0;">🔄 Regeneriraj besedilo</button>
+                        <div id="vo-preview-video-container" style="display:none; margin:15px 0;">
+                            <video id="vo-preview-video" style="width:100%; border-radius:8px;" controls></video>
                         </div>
-                    </div>
-                    
-                    <!-- Naming -->
-                    <div style="background:#0f0f0f; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:15px;">
-                        <h4 style="margin:0 0 10px;">3️⃣ Poimenovanje</h4>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                            <div>
-                                <label style="color:#888; font-size:12px;">ID</label>
-                                <input type="text" id="vo-name-id" placeholder="001" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;">
-                            </div>
-                            <div>
-                                <label style="color:#888; font-size:12px;">Produkt</label>
-                                <input type="text" id="vo-product-name" value="tshirt" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;" readonly>
-                            </div>
-                            <div>
-                                <label style="color:#888; font-size:12px;">Avtor</label>
-                                <input type="text" id="vo-author" placeholder="" style="width:100%; padding:8px; background:#1a1a1a; border:1px solid #333; border-radius:6px; color:#fff;">
-                            </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; margin:15px 0;">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HR" checked> 🇭🇷</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="CZ" checked> 🇨🇿</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="PL" checked> 🇵🇱</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="GR" checked> 🇬🇷</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="IT" checked> 🇮🇹</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HU" checked> 🇭🇺</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="SK" checked> 🇸🇰</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="BG" checked> 🇧🇬</label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="RO" checked> 🇷🇴</label>
                         </div>
-                    </div>
-                    
-                    <!-- Preview & Generate -->
-                    <div style="background:#0f0f0f; border:1px solid #8b5cf6; border-radius:12px; padding:20px;">
-                        <h4 style="margin:0 0 15px; color:#8b5cf6;">4️⃣ Predogled & Generiranje</h4>
-                        <button id="btn-vo-preview" style="width:100%; padding:14px; background:#8b5cf6; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:15px; font-weight:600; margin-bottom:15px;">🇸🇮 SLO Preview</button>
-                        
-                        <div id="vo-script-editor" style="display:none;">
-                            <h5 style="color:#8b5cf6; margin:0 0 10px;">Generirano besedilo:</h5>
-                            <div id="vo-script-items"></div>
-                            <button id="btn-vo-regen" style="width:100%; padding:10px; background:#333; color:#8b5cf6; border:1px solid #8b5cf6; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin:10px 0;">🔄 Regeneriraj besedilo</button>
-                            <div id="vo-preview-video-container" style="display:none; margin:15px 0;">
-                                <video id="vo-preview-video" style="width:100%; border-radius:8px;" controls></video>
-                            </div>
-                            <div style="display:flex; flex-wrap:wrap; gap:8px; margin:15px 0;">
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HR" checked> 🇭🇷</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="CZ" checked> 🇨🇿</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="PL" checked> 🇵🇱</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="GR" checked> 🇬🇷</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="IT" checked> 🇮🇹</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="HU" checked> 🇭🇺</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="SK" checked> 🇸🇰</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="BG" checked> 🇧🇬</label>
-                                <label style="display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="vo-country-check" value="RO" checked> 🇷🇴</label>
-                            </div>
-                            <button id="btn-vo-generate" style="width:100%; padding:14px; background:#10b981; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:700;">🚀 Generiraj vse z Voice-over</button>
-                        </div>
+                        <button id="btn-vo-generate" style="width:100%; padding:14px; background:#10b981; color:#000; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:700;">🚀 Generiraj vse z Voice-over</button>
                     </div>
                 </div>
             </div>
         </div>
         
         <script>
-        // === MODE 3: VOICE-OVER (self-contained) ===
+        // === MODE 3: VOICE-OVER ===
         (function() {
             var voVideoFile = null;
             var voVideoDuration = 0;
-            var voSelectedTexts = [];
             var voScript = [];
             var voSrtLoaded = false;
             
-            // Upload zone click
+            // Upload
             var uploadZone = document.getElementById('vo-upload-zone');
             var fileInput = document.getElementById('vo-file-input');
+            
+            function uploadVoVideo(file) {
+                if (!file) return;
+                uploadZone.textContent = '⏳ Nalagam...';
+                var formData = new FormData();
+                formData.append('video', file);
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/upload-video', true);
+                xhr.onload = function() {
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        voVideoFile = data.filename;
+                        document.getElementById('vo-video-el').src = '/uploads/' + voVideoFile;
+                        document.getElementById('vo-video-preview').style.display = 'block';
+                        uploadZone.textContent = '✅ ' + file.name;
+                        var baseName = file.name.replace(/\.[^.]+$/, '').split('_')[0] || 'VO';
+                        var idEl = document.getElementById('vo-name-id'); if(idEl) idEl.value = baseName;
+                        fetch('/api/localizer/video-duration?file=' + encodeURIComponent(voVideoFile))
+                            .then(function(r){return r.json()})
+                            .then(function(d){ voVideoDuration = d.duration || 30; document.getElementById('vo-video-info').textContent = voVideoDuration.toFixed(1) + 's'; });
+                            saveVoState();
+                    } catch(e) { uploadZone.textContent = '❌ Napaka'; }
+                };
+                xhr.onerror = function() { uploadZone.textContent = '❌ Napaka'; };
+                xhr.send(formData);
+            }
+            
             if (uploadZone && fileInput) {
                 uploadZone.addEventListener('click', function() { fileInput.click(); });
-                fileInput.addEventListener('change', function() {
-                    var file = this.files[0];
-                    if (!file) return;
-                    uploadZone.textContent = '⏳ Nalagam...';
-                    var formData = new FormData();
-                    formData.append('video', file);
-                    var xhr = new XMLHttpRequest();
-                    xhr.open('POST', '/api/upload-video', true);
-                    xhr.onload = function() {
-                        try {
-                            var data = JSON.parse(xhr.responseText);
-                            voVideoFile = data.filename;
-                            document.getElementById('vo-video-el').src = '/uploads/' + voVideoFile;
-                            document.getElementById('vo-video-preview').style.display = 'block';
-                            uploadZone.textContent = '✅ ' + file.name;
-                            fetch('/api/localizer/video-duration?file=' + encodeURIComponent(voVideoFile))
-                                .then(function(r){return r.json()})
-                                .then(function(d){ voVideoDuration = d.duration || 30; document.getElementById('vo-video-info').textContent = voVideoDuration.toFixed(1) + 's'; });
-                        } catch(e) { uploadZone.textContent = '❌ Napaka'; }
+                fileInput.addEventListener('change', function() { uploadVoVideo(this.files[0]); });
+                uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = '#8b5cf6'; });
+                uploadZone.addEventListener('dragleave', function(e) { e.preventDefault(); uploadZone.style.borderColor = '#333'; });
+                uploadZone.addEventListener('drop', function(e) {
+                    e.preventDefault(); uploadZone.style.borderColor = '#333';
+                    var file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('video/')) uploadVoVideo(file);
+                });
+            }
+            
+            // SRT upload
+            var srtZone = document.getElementById('vo-srt-zone');
+            var srtInput = document.getElementById('vo-srt-input');
+            if (srtZone && srtInput) {
+                srtZone.addEventListener('click', function() { srtInput.click(); });
+                srtInput.addEventListener('change', function() {
+                    var file = this.files[0]; if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var parsed = parseSRT(e.target.result);
+                        if (parsed.length > 0) {
+                            voScript = parsed; voSrtLoaded = true;
+                        saveVoState();
+                            renderScriptEditor();
+                            document.getElementById('vo-script-editor').style.display = 'block';
+                            document.getElementById('vo-srt-status').textContent = '✅ ' + parsed.length + ' stavkov';
+                            srtZone.textContent = '✅ ' + file.name;
+                        }
                     };
-                    xhr.onerror = function() { uploadZone.textContent = '❌ Napaka pri nalaganju'; };
-                    xhr.send(formData);
+                    reader.readAsText(file);
                 });
             }
             
-            // Render library
-            function renderLib() {
-                var container = document.getElementById('vo-library-content');
-                if (!container || typeof window.textLibrary === 'undefined') return;
-                var product = document.getElementById('vo-product').value || 'tshirt';
-                document.getElementById('vo-product-name').value = product;
-                var lib = window.textLibrary[product] || {};
-                var catLabels = { hook_problem: '🎯 HOOK', solution: '✅ REŠITEV', benefit: '💎 BENEFIT', cta: '🔥 CTA', social_proof: '⭐ SOCIAL' };
-                var html = '';
-                Object.keys(lib).forEach(function(cat) {
-                    var texts = lib[cat] || [];
-                    if (!texts.length) return;
-                    html += '<div style="margin-bottom:10px;"><div style="color:#8b5cf6; font-size:11px; font-weight:600; margin-bottom:4px;">' + (catLabels[cat]||cat) + '</div>';
-                    texts.forEach(function(text) {
-                        html += '<div style="padding:5px 8px; margin:2px 0; background:#1a1a1a; border:1px solid #333; border-radius:5px; font-size:12px; cursor:pointer; color:#ccc;" onclick="window._voAddText(this.textContent)">' + text + '</div>';
-                    });
-                    html += '</div>';
+            function parseSRT(text) {
+                var blocks = text.trim().split(/\n\s*\n/), result = [];
+                blocks.forEach(function(block) {
+                    var lines = block.trim().split('\n');
+                    var timeLine = lines.find(function(l) { return l.includes('-->'); });
+                    if (!timeLine) return;
+                    var parts = timeLine.split('-->');
+                    var start = srtTime(parts[0].trim()), end = srtTime(parts[1].trim());
+                    var textLines = [], found = false;
+                    lines.forEach(function(l) { if (l.includes('-->')) { found = true; return; } if (found && l.trim()) textLines.push(l.trim()); });
+                    if (textLines.length && !isNaN(start)) result.push({ text: textLines.join(' '), start: start, end: end });
                 });
-                container.innerHTML = html || '<p style="color:#555;">Ni tekstov</p>';
+                return result;
             }
+            function srtTime(ts) { ts = ts.replace(',','.'); var p = ts.split(':'); return p.length===3 ? parseFloat(p[0])*3600+parseFloat(p[1])*60+parseFloat(p[2]) : parseFloat(ts); }
             
-            // Add text by click
-            window._voAddText = function(text) {
-                text = text.trim();
-                if (text && voSelectedTexts.indexOf(text) === -1) {
-                    voSelectedTexts.push(text);
-                    renderSelected();
-                }
-            };
-            
-            function renderSelected() {
-                var container = document.getElementById('vo-selected-texts');
-                document.getElementById('vo-text-count').textContent = '(' + voSelectedTexts.length + ')';
-                if (!voSelectedTexts.length) {
-                    container.innerHTML = '<p style="color:#555; text-align:center; margin:0;">Klikni tekste v knjižnici levo ←</p>';
-                    return;
-                }
-                var html = '';
-                voSelectedTexts.forEach(function(text, i) {
-                    html += '<div style="display:flex; align-items:center; gap:8px; padding:5px 8px; margin:3px 0; background:#1a1a1a; border:1px solid #333; border-radius:6px;">';
-                    html += '<span style="color:#8b5cf6; font-weight:600; min-width:18px;">' + (i+1) + '</span>';
-                    html += '<span style="flex:1; font-size:12px;">' + text + '</span>';
-                    html += '<span onclick="window._voRemoveText(' + i + ')" style="color:#ef4444; cursor:pointer; padding:0 4px;">✕</span>';
-                    html += '</div>';
-                });
-                container.innerHTML = html;
-            }
-            
-            window._voRemoveText = function(idx) {
-                voSelectedTexts.splice(idx, 1);
-                renderSelected();
-            };
-            
-            // SLO Preview
-            document.getElementById('btn-vo-preview').addEventListener('click', async function() {
-                if (!voVideoFile) { alert('Najprej naloži video!'); return; }
-                var btn = this;
-                btn.disabled = true;
-                try {
-                    // If SRT was loaded or script already exists, skip AI generation
-                    if (!voSrtLoaded && (!voScript.length || btn.textContent.includes('Regeneriraj'))) {
-                        if (!voSelectedTexts.length) { alert('Dodaj tekste iz knjižnice ali naloži SRT!'); btn.disabled = false; return; }
-                        btn.textContent = '⏳ Generiram besedilo...';
-                        var scriptData = await window.postJSON('/api/localizer/voiceover-script', {
-                            texts: voSelectedTexts.map(function(t){ return {text:t}; }),
-                            videoDuration: voVideoDuration
-                        });
-                        voScript = scriptData.script || [];
-                        renderScriptEditor();
-                        document.getElementById('vo-script-editor').style.display = 'block';
-                    }
-                    
-                    // Read any edits from textareas
-                    var currentScript = voScript.map(function(item, i) {
-                        var ta = document.getElementById('vo-edit-' + i);
-                        return { text: ta ? ta.value : item.text, start: item.start, end: item.end };
-                    });
-                    
-                    btn.textContent = '⏳ Generiram SLO preview video...';
-                    var previewResp = await window.postJSON('/api/localizer/vo-preview', {
-                        videoClean: voVideoFile,
-                        script: currentScript,
-                    });
-                    if (previewResp.previewUrl) {
-                        document.getElementById('vo-preview-video').src = previewResp.previewUrl + '?t=' + Date.now();
-                        document.getElementById('vo-preview-video-container').style.display = 'block';
-                    }
-                    btn.textContent = '🇸🇮 Regeneriraj SLO Preview';
-                    btn.disabled = false;
-                } catch(e) {
-                    alert('Napaka: ' + (e.message||e));
-                    btn.textContent = '🇸🇮 SLO Preview';
-                    btn.disabled = false;
-                }
-            });
-            
+            // Script editor
             function renderScriptEditor() {
                 var container = document.getElementById('vo-script-items');
                 var html = '';
@@ -1474,6 +1456,68 @@
                 container.innerHTML = html;
             }
             
+            // SLO Preview
+            document.getElementById('btn-vo-preview').addEventListener('click', async function() {
+                if (!voVideoFile) { alert('Najprej naloži video!'); return; }
+                var btn = this;
+                btn.disabled = true;
+                try {
+                    if (!voSrtLoaded && (!voScript.length || btn.textContent.includes('Regeneriraj'))) {
+                        var points = document.getElementById('vo-points').value.trim();
+                        if (!points) { alert('Vpiši besedila/poante!'); btn.disabled = false; return; }
+                        var prompt = document.getElementById('vo-prompt').value.trim();
+                        btn.textContent = '⏳ Generiram besedilo...';
+                        var scriptData = await window.postJSON('/api/localizer/voiceover-script', {
+                            texts: [{ text: points }],
+                            videoDuration: voVideoDuration || 30,
+                            product: document.getElementById('vo-name-product')?.value || 'tshirt',
+                            userPrompt: prompt,
+                            mode: 'story'
+                        });
+                        voScript = scriptData.script || [];
+                        renderScriptEditor();
+                        document.getElementById('vo-script-editor').style.display = 'block';
+                    }
+                    var currentScript = voScript.map(function(item, i) {
+                        var ta = document.getElementById('vo-edit-' + i);
+                        return { text: ta ? ta.value : item.text, start: item.start, end: item.end };
+                    });
+                    btn.textContent = '⏳ Generiram SLO preview...';
+                    var previewResp = await window.postJSON('/api/localizer/vo-preview', {
+                        videoClean: voVideoFile, script: currentScript, videoDuration: voVideoDuration || 30
+                    });
+                    if (previewResp.previewUrl) {
+                        document.getElementById('vo-preview-video').src = previewResp.previewUrl + '?t=' + Date.now();
+                        document.getElementById('vo-preview-video-container').style.display = 'block';
+                    }
+                    btn.textContent = '🇸🇮 Regeneriraj SLO Preview';
+                    saveVoState();
+                    btn.disabled = false;
+                } catch(e) { alert('Napaka: ' + (e.message||e)); btn.textContent = '🇸🇮 SLO Preview'; btn.disabled = false; }
+            });
+            
+            // Regenerate text only
+            document.getElementById('btn-vo-regen').addEventListener('click', async function() {
+                if (!voVideoFile) { alert('Najprej naloži video!'); return; }
+                var points = document.getElementById('vo-points').value.trim();
+                if (!points) { alert('Vpiši besedila!'); return; }
+                var prompt = document.getElementById('vo-prompt').value.trim();
+                var btn = this;
+                btn.textContent = '⏳ Generiram...'; btn.disabled = true; voSrtLoaded = false;
+                try {
+                    var scriptData = await window.postJSON('/api/localizer/voiceover-script', {
+                        texts: [{ text: points }], videoDuration: voVideoDuration || 30,
+                        product: document.getElementById('vo-name-product')?.value || 'tshirt',
+                        userPrompt: prompt, mode: 'story'
+                    });
+                    voScript = scriptData.script || [];
+                    renderScriptEditor();
+                    btn.textContent = '🔄 Regeneriraj besedilo'; btn.disabled = false;
+                    saveVoState();
+                } catch(e) { alert('Napaka: ' + (e.message||e)); btn.textContent = '🔄 Regeneriraj besedilo'; btn.disabled = false; }
+                    saveVoState();
+            });
+            
             // Generate all
             document.getElementById('btn-vo-generate').addEventListener('click', async function() {
                 if (!voVideoFile || !voScript.length) { alert('Najprej naredi SLO Preview!'); return; }
@@ -1483,125 +1527,124 @@
                 });
                 var countries = Array.from(document.querySelectorAll('.vo-country-check:checked')).map(function(cb){return cb.value;});
                 if (!countries.length) { alert('Izberi vsaj eno državo!'); return; }
-                var id = document.getElementById('vo-name-id').value || '001';
-                var product = document.getElementById('vo-product').value || 'tshirt';
-                var author = document.getElementById('vo-author').value || (typeof currentUser !== 'undefined' ? currentUser : 'VO');
-                var d = new Date();
-                var date = String(d.getDate()).padStart(2,'0') + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getFullYear()).slice(-2);
-                var btn = this;
-                btn.textContent = '⏳ Generiram...';
-                btn.disabled = true;
+                var voId = document.getElementById('vo-name-id').value || '001';
+                var voDate = document.getElementById('vo-name-date').value || '';
+                var voProduct = document.getElementById('vo-name-product').value || 'tshirt';
+                var author = document.getElementById('vo-author').value || 'VO';
+                var btn = this; btn.textContent = '⏳ Generiram...'; btn.disabled = true;
                 try {
                     await window.postJSON('/api/localizer/generate', {
-                        videoClean: voVideoFile, name: id+'_'+date+'_'+product+'_VO_'+author,
-                        namingParts: {id:id, date:date, product:product, type:'VO', author:author},
-                        texts: voSelectedTexts.map(function(t){return {text:t};}),
-                        mode: 'voiceover', voiceoverScript: editedScript, videoDuration: voVideoDuration,
+                        videoClean: voVideoFile,
+                        name: voId + '_' + voDate + '_' + voProduct + '_VO_' + author,
+                        namingParts: {id: voId, date: voDate, product: voProduct, type: 'VO', author: author},
+                        texts: editedScript.map(function(s){return {text: s.text};}),
+                        mode: 'voiceover', voiceoverScript: editedScript, videoDuration: voVideoDuration || 30,
                         countries: countries, source: 'library', style: 'white', fontSize: 90
                     });
                     alert('✅ Voice-over generiranje startano! Poglej v Downloads.');
+                    saveVoState();
                 } catch(e) { alert('Napaka: ' + (e.message||e)); }
-                btn.textContent = '🚀 Generiraj vse z Voice-over';
-                btn.disabled = false;
+                btn.textContent = '🚀 Generiraj vse z Voice-over'; btn.disabled = false;
             });
             
-            // Regenerate script only (no video)
-            document.getElementById("btn-vo-regen").addEventListener("click", async function() {
-                if (!voVideoFile) { alert("Najprej naloži video!"); return; }
-                if (!voSelectedTexts.length) { alert("Dodaj tekste!"); return; }
-                var btn = this;
-                btn.textContent = "⏳ Generiram novo besedilo...";
-                voSrtLoaded = false;
-                btn.disabled = true;
+            // Reset
+            window._voReset = function() {
+                voVideoFile = null; voVideoDuration = 0; voScript = []; voSrtLoaded = false;
+                if (uploadZone) uploadZone.textContent = '📁 Klikni ali povleci video sem';
+                document.getElementById('vo-video-preview').style.display = 'none';
+                document.getElementById('vo-name-id').value = '';
+                document.getElementById('vo-author').value = '';
+                document.getElementById('vo-points').value = '';
+                document.getElementById('vo-script-editor').style.display = 'none';
+                document.getElementById('vo-preview-video-container').style.display = 'none';
+                document.getElementById('vo-srt-status').textContent = '';
+                var sz = document.getElementById('vo-srt-zone'); if(sz) sz.textContent = 'Klikni za SRT';
+                sessionStorage.removeItem("voState");
+            };
+            
+            // Set date
+            var d = new Date(), dd = String(d.getDate()).padStart(2,'0'), mm = String(d.getMonth()+1).padStart(2,'0'), yy = String(d.getFullYear()).slice(-2);
+            var dateEl = document.getElementById('vo-name-date'); if (dateEl) dateEl.value = dd+'-'+mm+'-'+yy;
+
+            // === STATE PERSISTENCE ===
+            function saveVoState() {
                 try {
-                    var scriptData = await window.postJSON("/api/localizer/voiceover-script", {
-                        texts: voSelectedTexts.map(function(t){ return {text:t}; }),
-                        videoDuration: voVideoDuration
+                    var scriptEdits = voScript.map(function(item, i) {
+                        var ta = document.getElementById('vo-edit-' + i);
+                        return { text: ta ? ta.value : item.text, start: item.start, end: item.end };
                     });
-                    voScript = scriptData.script || [];
-                    renderScriptEditor();
-                    btn.textContent = "🔄 Regeneriraj besedilo";
-                    btn.disabled = false;
-                } catch(e) {
-                    alert("Napaka: " + (e.message||e));
-                    btn.textContent = "🔄 Regeneriraj besedilo";
-                    btn.disabled = false;
-                }
-            });
-            // SRT upload
-            var srtZone = document.getElementById('vo-srt-zone');
-            var srtInput = document.getElementById('vo-srt-input');
-            if (srtZone && srtInput) {
-                srtZone.addEventListener('click', function() { srtInput.click(); });
-                srtInput.addEventListener('change', function() {
-                    var file = this.files[0];
-                    if (!file) return;
-                    var reader = new FileReader();
-                    reader.onload = function(e) {
-                        var content = e.target.result;
-                        var parsed = parseSRT(content);
-                        if (parsed.length > 0) {
-                            voScript = parsed;
-                            voSrtLoaded = true;
-                            renderScriptEditor();
-                            document.getElementById('vo-script-editor').style.display = 'block';
-                            document.getElementById('vo-srt-status').textContent = '✅ ' + parsed.length + ' stavkov';
-                            srtZone.textContent = '✅ ' + file.name;
-                        } else {
-                            document.getElementById('vo-srt-status').textContent = '❌ Napaka pri branju';
-                        }
-                    };
-                    reader.readAsText(file);
-                });
+                    sessionStorage.setItem('voState', JSON.stringify({
+                        voVideoFile: voVideoFile,
+                        voVideoDuration: voVideoDuration,
+                        voScript: scriptEdits.length ? scriptEdits : voScript,
+                        voSrtLoaded: voSrtLoaded,
+                        points: document.getElementById('vo-points')?.value || '',
+                        prompt: document.getElementById('vo-prompt')?.value || '',
+                        voId: document.getElementById('vo-name-id')?.value || '',
+                        voProduct: document.getElementById('vo-name-product')?.value || 'tshirt',
+                        author: document.getElementById('vo-author')?.value || '',
+                        uploadLabel: uploadZone?.textContent || '',
+                        scriptVisible: document.getElementById('vo-script-editor')?.style.display !== 'none',
+                        previewUrl: document.getElementById('vo-preview-video')?.src || '',
+                        previewVisible: document.getElementById('vo-preview-video-container')?.style.display !== 'none',
+                        activeTab: document.querySelector('.mode-tab.active')?.dataset?.mode || ''
+                    }));
+                } catch(e) {}
             }
             
-            function parseSRT(text) {
-                var blocks = text.trim().split(/\n\s*\n/);
-                var result = [];
-                blocks.forEach(function(block) {
-                    var lines = block.trim().split('\n');
-                    if (lines.length < 2) return;
-                    var timeLine = lines.find(function(l) { return l.includes('-->'); });
-                    if (!timeLine) return;
-                    var parts = timeLine.split('-->');
-                    var start = srtTimeToSec(parts[0].trim());
-                    var end = srtTimeToSec(parts[1].trim());
-                    var textLines = [];
-                    var foundTime = false;
-                    lines.forEach(function(l) {
-                        if (l.includes('-->')) { foundTime = true; return; }
-                        if (foundTime && l.trim()) textLines.push(l.trim());
-                    });
-                    if (textLines.length > 0 && !isNaN(start) && !isNaN(end)) {
-                        result.push({ text: textLines.join(' '), start: start, end: end });
+            function restoreVoState() {
+                try {
+                    var raw = sessionStorage.getItem('voState');
+                    if (!raw) return;
+                    var s = JSON.parse(raw);
+                    if (!s.voVideoFile) return;
+                    voVideoFile = s.voVideoFile;
+                    voVideoDuration = s.voVideoDuration || 0;
+                    voScript = s.voScript || [];
+                    voSrtLoaded = s.voSrtLoaded || false;
+                    if (uploadZone) uploadZone.textContent = s.uploadLabel || '✅ Video naložen';
+                    if (s.voVideoFile) {
+                        document.getElementById('vo-video-el').src = '/uploads/' + voVideoFile;
+                        document.getElementById('vo-video-preview').style.display = 'block';
+                        document.getElementById('vo-video-info').textContent = voVideoDuration.toFixed(1) + 's';
                     }
-                });
-                return result;
+                    if (s.points) document.getElementById('vo-points').value = s.points;
+                    if (s.prompt) document.getElementById('vo-prompt').value = s.prompt;
+                    if (s.voId) document.getElementById('vo-name-id').value = s.voId;
+                    if (s.voProduct) document.getElementById('vo-name-product').value = s.voProduct;
+                    if (s.author) document.getElementById('vo-author').value = s.author;
+                    if (voScript.length) {
+                        renderScriptEditor();
+                        if (s.scriptVisible) document.getElementById('vo-script-editor').style.display = 'block';
+                    }
+                    if (s.previewUrl && s.previewVisible) {
+                        document.getElementById('vo-preview-video').src = s.previewUrl;
+                        document.getElementById('vo-preview-video-container').style.display = 'block';
+                    }
+                    // Restore active tab
+                    if (s.activeTab === 'voiceover') {
+                        setTimeout(function() {
+                            document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
+                            document.querySelectorAll('.mode-content').forEach(function(c) { c.classList.remove('active'); });
+                            var voTab = document.querySelector('.mode-tab[data-mode="voiceover"]');
+                            if (voTab) voTab.classList.add('active');
+                            var voContent = document.getElementById('mode-voiceover');
+                            if (voContent) voContent.classList.add('active');
+                        }, 100);
+                    }
+                } catch(e) {}
             }
             
-            function srtTimeToSec(timeStr) {
-                timeStr = timeStr.replace(',', '.');
-                var p = timeStr.split(':');
-                if (p.length === 3) return parseFloat(p[0]) * 3600 + parseFloat(p[1]) * 60 + parseFloat(p[2]);
-                if (p.length === 2) return parseFloat(p[0]) * 60 + parseFloat(p[1]);
-                return parseFloat(p[0]);
-            }
-            // Product change
-            document.getElementById('vo-product').addEventListener('change', renderLib);
+            // Auto-save on key events
+            document.getElementById('vo-points')?.addEventListener('input', function() { setTimeout(saveVoState, 500); });
+            document.getElementById('vo-prompt')?.addEventListener('input', function() { setTimeout(saveVoState, 500); });
+            document.getElementById('vo-author')?.addEventListener('input', saveVoState);
+            document.getElementById('vo-name-id')?.addEventListener('input', saveVoState);
             
-            // Render on tab switch
-            var origTabHandler = null;
-            document.querySelectorAll('.mode-tab').forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    if (tab.dataset.mode === 'voiceover') setTimeout(renderLib, 100);
-                });
-            });
-            
-            // Initial delayed render
-            setTimeout(renderLib, 1500);
+            // Restore on load
+            restoreVoState();
         })();
         </script>
-        </div>
         <!-- MODE 2: Localize (Bulk) -->
         <div class="mode-content" id="mode-localize">
             <div class="layout">
@@ -2302,7 +2345,8 @@
             
             console.log('[loadCreative]', index, 'creative.segments:', creative.segments?.length, 'first:', JSON.stringify(creative.segments?.[0]));
             
-            // Load creative data
+            // Load creative data - DON'T let loadedmetadata overwrite segments
+            isInitialLoad = false;
             uploadedFilename = creative.filename;
             segments = JSON.parse(JSON.stringify(creative.segments || []));
             selectedStyle = creative.style || 'white';
@@ -3843,6 +3887,7 @@
                 }
                 
                 btn.textContent = '🇸🇮 Regeneriraj SLO Preview';
+                    saveVoState();
                 btn.disabled = false;
             } catch (e) {
                 alert('Napaka: ' + e.message);
@@ -3906,6 +3951,7 @@
                 });
                 
                 alert('✅ Voice-over generiranje startano! Poglej v Downloads.');
+                    saveVoState();
                 btn.textContent = '🚀 Generiraj vse z Voice-over';
                 btn.disabled = false;
             } catch (e) {
@@ -4132,6 +4178,151 @@
                 isInitialLoad = false; // Reset flag
             }
         });
+        
+        // Live Preview Canvas - draws video frame + text overlays matching final render
+        var canvasStyleMap = {
+            white:     { bg: 'rgba(255,255,255,0.95)', color: '#000', outline: false },
+            black:     { bg: 'rgba(0,0,0,0.9)', color: '#fff', outline: false },
+            shadow:    { bg: null, color: '#fff', outline: true, outlineColor: '#000' },
+            rounded:   { bg: 'rgba(255,255,255,0.95)', color: '#000', outline: false, radius: true },
+            gradient:  { bg: '#10b981', color: '#fff', outline: false },
+            outline:   { bg: null, color: '#fff', outline: true, outlineColor: '#fff' },
+            red:       { bg: '#ef4444', color: '#fff', outline: false },
+            orange:    { bg: '#f97316', color: '#fff', outline: false },
+            yellow:    { bg: '#eab308', color: '#000', outline: false },
+            green:     { bg: '#22c55e', color: '#fff', outline: false },
+            fire:      { bg: '#ff3300', color: '#fff', outline: false },
+            neon:      { bg: '#000', color: '#0ff', outline: true, outlineColor: '#0ff' },
+            explosive: { bg: '#7c3aed', color: '#fff', outline: false },
+            gold:      { bg: '#fbbf24', color: '#000', outline: false }
+        };
+        
+        function renderLivePreview() {
+            var canvas = document.getElementById('live-preview-canvas');
+            var vp = document.getElementById('video-preview');
+            if (!canvas || !vp || vp.readyState < 2) return;
+            
+            var ctx = canvas.getContext('2d');
+            var vw = vp.videoWidth || 1080;
+            var vh = vp.videoHeight || 1920;
+            
+            if (canvas.width !== vw || canvas.height !== vh) {
+                canvas.width = vw;
+                canvas.height = vh;
+            }
+            
+            try { ctx.drawImage(vp, 0, 0, vw, vh); } catch(e) { return; }
+            
+            var currentTime = vp.currentTime || 0;
+            // ASS fontSize ≈ 65% of stated size on PlayResY=1920
+            var rawFs = parseInt(document.getElementById('font-size')?.value) || 72;
+            var fontScale = vw / 1080;
+            var fs = Math.round(rawFs * 0.50 * fontScale);
+            var globalStyle = selectedStyle || 'white';
+            
+            // Collect active texts with their styles
+            var activeItems = [];
+            for (var si = 0; si < segments.length; si++) {
+                var seg = segments[si];
+                if (currentTime >= seg.start && currentTime < seg.end && seg.texts && seg.texts.length > 0) {
+                    var segStyle = seg.style || globalStyle;
+                    for (var ti = 0; ti < seg.texts.length; ti++) {
+                        activeItems.push({ text: seg.texts[ti].text, style: segStyle });
+                    }
+                }
+            }
+            
+            if (activeItems.length > 0) {
+                ctx.font = 'bold ' + fs + 'px "Noto Sans", Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                var maxWidth = vw * 0.85; // max text width = 85% of video
+                var lineHeight = fs * 1.4;
+                // Match ASS padding: scaledFont * 0.6 for X, * 0.35 for Y
+                var padX = Math.round(fs * 0.6);
+                var padY = Math.round(fs * 0.35);
+                
+                // Word-wrap all items into lines
+                var allLines = [];
+                for (var i = 0; i < activeItems.length; i++) {
+                    var item = activeItems[i];
+                    var txt = useUppercase ? item.text.toUpperCase() : item.text;
+                    var style = canvasStyleMap[item.style] || canvasStyleMap.white;
+                    var words = txt.split(' ');
+                    var line = '';
+                    
+                    for (var w = 0; w < words.length; w++) {
+                        var testLine = line ? line + ' ' + words[w] : words[w];
+                        if (ctx.measureText(testLine).width > maxWidth && line) {
+                            allLines.push({ text: line, style: style });
+                            line = words[w];
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    if (line) allLines.push({ text: line, style: style });
+                }
+                
+                // Calculate total block height and center vertically
+                var totalH = allLines.length * lineHeight;
+                var startY = vh / 2 - totalH / 2 + lineHeight / 2;
+                
+                // Draw each line with background
+                for (var li = 0; li < allLines.length; li++) {
+                    var ln = allLines[li];
+                    var y = startY + li * lineHeight;
+                    var tw = ctx.measureText(ln.text).width;
+                    
+                    var boxX = vw/2 - tw/2 - padX;
+                    var boxY = y - fs/2 - padY;
+                    var boxW = tw + padX * 2;
+                    var boxH = fs + padY * 2;
+                    
+                    // Background
+                    if (ln.style.bg) {
+                        ctx.fillStyle = ln.style.bg;
+                        if (ln.style.radius) {
+                            var r = fs * 0.35;
+                            ctx.beginPath();
+                            ctx.moveTo(boxX + r, boxY);
+                            ctx.lineTo(boxX + boxW - r, boxY);
+                            ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+                            ctx.lineTo(boxX + boxW, boxY + boxH - r);
+                            ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+                            ctx.lineTo(boxX + r, boxY + boxH);
+                            ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+                            ctx.lineTo(boxX, boxY + r);
+                            ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+                            ctx.closePath();
+                            ctx.fill();
+                        } else {
+                            ctx.fillRect(boxX, boxY, boxW, boxH);
+                        }
+                    }
+                    
+                    // Outline/shadow
+                    if (ln.style.outline) {
+                        ctx.strokeStyle = ln.style.outlineColor || '#000';
+                        ctx.lineWidth = fs * 0.08;
+                        ctx.lineJoin = 'round';
+                        ctx.strokeText(ln.text, vw/2, y);
+                    }
+                    
+                    // Text
+                    ctx.fillStyle = ln.style.color;
+                    ctx.fillText(ln.text, vw/2, y);
+                }
+            }
+        }
+        
+        window.toggleLivePreviewPlay = function() {
+            var vp = document.getElementById('video-preview');
+            if (!vp) return;
+            if (vp.paused) vp.play(); else vp.pause();
+        };
+        
+        setInterval(renderLivePreview, 33);
         
         async function handleFile(file) {
             uploadZone.innerHTML = '<div class="icon">⏳</div><h4>Nalagam...</h4>';
@@ -5131,7 +5322,7 @@
             }
         };
         
-        const stylePreviewCSS = {
+        var stylePreviewCSS = {
             white: { background: '#fff', color: '#000', textShadow: 'none', border: 'none' },
             black: { background: '#000', color: '#fff', textShadow: 'none', border: '1px solid #333' },
             shadow: { background: 'transparent', color: '#fff', textShadow: '2px 2px 4px #000, -1px -1px 2px #000', border: 'none' },
