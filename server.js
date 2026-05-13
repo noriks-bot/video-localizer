@@ -901,6 +901,7 @@ app.post('/api/translate-texts', async (req, res) => {
     if (!texts || !languages) return res.status(400).json({ error: 'Missing texts or languages' });
     
     const LANG_NAMES = {
+        'SI': 'Slovenian',
         'HR': 'Croatian',
         'CZ': 'Czech', 
         'PL': 'Polish',
@@ -909,7 +910,8 @@ app.post('/api/translate-texts', async (req, res) => {
         'HU': 'Hungarian',
         'SK': 'Slovak',
         'BG': 'Bulgarian',
-        'RO': 'Romanian'
+        'RO': 'Romanian',
+        'DE': 'German'
     };
     
     try {
@@ -1051,7 +1053,7 @@ app.get('/api/localize/:id/download', (req, res) => {
 
 // Process localization job
 async function processLocalizationJob(job) {
-    const LANGUAGES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const LANGUAGES = ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
     const outputDir = path.join(__dirname, 'uploads', 'localized', job.id);
     fs.mkdirSync(outputDir, { recursive: true });
     
@@ -2256,7 +2258,7 @@ app.post('/api/localizer/generate', async (req, res) => {
     if (!fs.existsSync(videoPath)) return res.status(404).json({ error: 'Video not found' });
     
     // Validate and default countries
-    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const ALL_COUNTRIES = ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
     const selectedCountries = (countries && Array.isArray(countries) && countries.length > 0) 
         ? countries.filter(c => ALL_COUNTRIES.includes(c))
         : ALL_COUNTRIES;
@@ -2417,10 +2419,10 @@ Return JSON array with verdicts:
 
 async function generateAllCountries(job, videoPath) {
     // Use job.countries if specified, otherwise default to all
-    const LANGUAGES = job.countries || ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const LANGUAGES = job.countries || ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
     const LANG_NAMES = {
-        HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian', 
-        GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak'
+        SI: 'Slovenian', HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian', 
+        GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak', DE: 'German'
     };
     
     const outputDir = path.join(__dirname, 'uploads', 'generated', job.id);
@@ -2840,10 +2842,10 @@ JSON: [{"text": "stavek", "start": 0, "end": 2.5}, ...]
 
 // Generate voiceover video for all countries
 async function generateVoiceoverCountries(job, videoPath) {
-    const LANGUAGES = job.countries || ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const LANGUAGES = job.countries || ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
     const LANG_NAMES = {
-        HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian',
-        GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak'
+        SI: 'Slovenian', HR: 'Croatian', CZ: 'Czech', PL: 'Polish', BG: 'Bulgarian', RO: 'Romanian',
+        GR: 'Greek', IT: 'Italian', HU: 'Hungarian', SK: 'Slovak', DE: 'German'
     };
     
     const outputDir = path.join(__dirname, 'uploads', 'generated', job.id);
@@ -3400,7 +3402,7 @@ app.post('/api/queue/add', (req, res) => {
     }
     
     // Validate countries
-    const ALL_COUNTRIES = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+    const ALL_COUNTRIES = ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
     const selectedCountries = (countries && Array.isArray(countries) && countries.length > 0) 
         ? countries.filter(c => ALL_COUNTRIES.includes(c))
         : ALL_COUNTRIES;
