@@ -1189,11 +1189,14 @@
                             
                             <!-- Country Dropdown -->
                             <div class="country-dropdown" style="position:relative;">
-                                <button class="btn btn-secondary" onclick="toggleCountryDropdown(event)" id="btn-countries">🌍 Države (9)</button>
+                                <button class="btn btn-secondary" onclick="toggleCountryDropdown(event)" id="btn-countries">🌍 Države (11)</button>
                                 <div id="country-dropdown-menu" style="display:none; position:absolute; bottom:100%; left:0; margin-bottom:5px; background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; min-width:200px; z-index:100; box-shadow: 0 -4px 20px rgba(0,0,0,0.5);">
                                     <div style="display:flex; flex-direction:column; gap:6px;">
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
-                                            <input type="checkbox" class="country-check" value="HR" checked style="width:16px; height:16px;"> 🇭🇷 Hrvaška
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
+                                            <input type="checkbox" class="country-check" value="SI" checked style="width:16px; height:16px;"> 🇸🇮 Slovenija
+                                        </label>
+                                        <input type="checkbox" class="country-check" value="HR" checked style="width:16px; height:16px;"> 🇭🇷 Hrvaška
                                         </label>
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
                                             <input type="checkbox" class="country-check" value="CZ" checked style="width:16px; height:16px;"> 🇨🇿 Češka
@@ -1214,6 +1217,9 @@
                                             <input type="checkbox" class="country-check" value="SK" checked style="width:16px; height:16px;"> 🇸🇰 Slovaška
                                         </label>
 <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check" value="BG" checked style="width:16px; height:16px;"> 🇧🇬 Bolgarija                                        </label>                                        <label style="display:flex; align-items:center; gap:8px; padding:4px 0; cursor:pointer;">                                            <input type="checkbox" class="country-check" value="RO" checked style="width:16px; height:16px;"> 🇷🇴 Romunija                                        </label>
+                                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
+                                            <input type="checkbox" class="country-check" value="DE" checked style="width:16px; height:16px;"> 🇩🇪 Nemčija
+                                        </label>
                                     </div>
                                     <div style="display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid #333;">
                                         <button onclick="selectAllCountries(); event.stopPropagation();" class="btn btn-secondary btn-sm" style="flex:1;">✅ Vse</button>
@@ -1843,7 +1849,7 @@ Style: Authentic, confident, persuasive — a narrative that makes the viewer fe
                         <div style="display:flex; gap:10px; align-items:center;">
                             <!-- Country Dropdown Mode 2 -->
                             <div class="country-dropdown" style="position:relative;">
-                                <button class="btn btn-secondary" onclick="toggleCountryDropdown2(event)" id="btn-countries-2">🌍 Države (9)</button>
+                                <button class="btn btn-secondary" onclick="toggleCountryDropdown2(event)" id="btn-countries-2">🌍 Države (11)</button>
                                 <div id="country-dropdown-menu-2" style="display:none; position:absolute; bottom:100%; left:0; margin-bottom:5px; background:#1a1a1a; border:1px solid #333; border-radius:8px; padding:10px; min-width:200px; z-index:100; box-shadow:0 -4px 20px rgba(0,0,0,0.5);">
                                     <div style="display:flex; flex-direction:column; gap:6px;">
                                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding:6px 8px; border-radius:4px;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
@@ -5826,8 +5832,8 @@ Style: Authentic, confident, persuasive — a narrative that makes the viewer fe
         // ============ END QUEUE FUNCTIONS ============
         
         // ============ DOWNLOADS PANEL ============
-        const FLAGS = { HR: '🇭🇷', CZ: '🇨🇿', PL: '🇵🇱', GR: '🇬🇷', IT: '🇮🇹', HU: '🇭🇺', SK: '🇸🇰', BG: '🇧🇬', RO: '🇷🇴' };
-        const LANGS = ['HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO'];
+        const FLAGS = { SI: '🇸🇮', HR: '🇭🇷', CZ: '🇨🇿', PL: '🇵🇱', GR: '🇬🇷', IT: '🇮🇹', HU: '🇭🇺', SK: '🇸🇰', DE: '🇩🇪', BG: '🇧🇬', RO: '🇷🇴' };
+        const LANGS = ['SI', 'HR', 'CZ', 'PL', 'GR', 'IT', 'HU', 'SK', 'BG', 'RO', 'DE'];
         let allDownloadJobs = [];
         let downloadedItems = {}; // Will be loaded per user
         let currentDownloadTab = 'library'; // 'library' or 'localize'
